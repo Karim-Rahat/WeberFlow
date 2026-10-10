@@ -64,9 +64,20 @@ async function csrf(): Promise<void> {
 }
 
 async function api<T>(url: string, options: RequestInit = {}): Promise<T> {
+    const method = options.method?.toUpperCase() ?? 'GET';
+    const csrfCookie = document.cookie
+        .split('; ')
+        .find((cookie) => cookie.startsWith('XSRF-TOKEN='))
+        ?.split('=')[1];
+
     const response = await fetch(url, {
         credentials: 'include',
-        headers: { Accept: 'application/json', 'Content-Type': 'application/json', ...options.headers },
+        headers: {
+            Accept: 'application/json',
+            'Content-Type': 'application/json',
+            ...(csrfCookie && method !== 'GET' ? { 'X-XSRF-TOKEN': decodeURIComponent(csrfCookie) } : {}),
+            ...options.headers,
+        },
         ...options,
     });
 
