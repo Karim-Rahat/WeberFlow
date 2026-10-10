@@ -5,13 +5,19 @@ import react from '@vitejs/plugin-react';
 import tailwindcss from '@tailwindcss/vite';
 
 export default defineConfig({
+    resolve: {
+        alias: {
+            '@': new URL('./resources/js', import.meta.url).pathname,
+        },
+    },
     plugins: [
         laravel({
-            input: ['resources/css/app.css', 'resources/js/app.tsx'],
+            input: ['resources/css/app.css', 'resources/js/main.tsx'],
             refresh: true,
             fonts: [
                 bunny('Manrope', {
                     weights: [400, 500, 600, 700],
+                    optimizedFallbacks: false,
                 }),
             ],
         }),

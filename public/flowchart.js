@@ -199,12 +199,12 @@ document.addEventListener('keydown', event => {
     if (event.key === 'Escape' && document.activeElement === search && search.value) { search.value = ''; state.search = ''; renderAll(); }
 });
 
-const storedTheme = localStorage.getItem('workos-theme');
+const storedTheme = localStorage.getItem('weberflow-blueprint-theme');
 if (storedTheme) document.documentElement.dataset.theme = storedTheme;
 document.getElementById('themeToggle').addEventListener('click', () => {
     const next = document.documentElement.dataset.theme === 'dark' ? 'light' : 'dark';
     document.documentElement.dataset.theme = next;
-    localStorage.setItem('workos-theme', next);
+    localStorage.setItem('weberflow-blueprint-theme', next);
 });
 
 window.addEventListener('resize', () => requestAnimationFrame(drawConnectors));

@@ -2,6 +2,28 @@
 
 An office project management platform built with Laravel, React, TypeScript, and Tailwind CSS.
 
+## Local setup
+
+```bash
+composer install
+npm install
+cp .env.example .env
+php artisan key:generate
+php artisan migrate --seed
+npm run build
+php artisan serve
+```
+
+The seeded development account is `karim@weberflow.local` with password `password`. Run the queue worker, scheduler, and Reverb in separate terminals when testing asynchronous features:
+
+```bash
+php artisan queue:work
+php artisan schedule:work
+php artisan reverb:start
+```
+
+The interactive product blueprint is available at `/`, and the authenticated application is available at `/app`.
+
 <p align="center"><a href="https://laravel.com" target="_blank"><img src="https://raw.githubusercontent.com/laravel/art/master/logo-lockup/5%20SVG/2%20CMYK/1%20Full%20Color/laravel-logolockup-cmyk-red.svg" width="400" alt="Laravel Logo"></a></p>
 
 <p align="center">

@@ -7,12 +7,15 @@
         "dev": "vite"
     },
     "devDependencies": {
+        "@laravel/echo-react": "^2.6.1",
         "@tailwindcss/vite": "^4.0.0",
         "@types/react": "^19.3.0",
         "@types/react-dom": "^19.3.0",
         "@vitejs/plugin-react": "^6.1.2",
         "concurrently": "^10.0.3",
+        "laravel-echo": "^2.6.1",
         "laravel-vite-plugin": "^3.1",
+        "pusher-js": "^8.6.0",
         "tailwindcss": "^4.0.0",
         "typescript": "^7.0.2",
         "vite": "^8.0.0"
@@ -21,10 +24,13 @@
         "@laravel/multiplex": "^0.4.1"
     },
     "dependencies": {
+        "@radix-ui/react-slot": "^1.4.0",
+        "class-variance-authority": "^0.7.1",
         "clsx": "^2.1.1",
         "lucide-react": "^1.55.0",
         "react": "^19.3.0",
         "react-dom": "^19.3.0",
+        "react-router-dom": "^7.18.4",
         "tailwind-merge": "^3.7.0"
     }
 }
