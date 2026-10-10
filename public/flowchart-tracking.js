@@ -24,7 +24,7 @@
     summary.className = 'completion-summary';
     summary.innerHTML = `
       <strong>✓ Releases 0 and 1 complete</strong>
-      <span>11 capabilities complete · ${completionDate}</span>
+      <span>11 roadmap capabilities + platform admin delivered · ${completionDate}</span>
     `;
     target.insertAdjacentElement('afterend', summary);
   }

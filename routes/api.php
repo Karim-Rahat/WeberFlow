@@ -1,5 +1,8 @@
 <?php
 
+use App\Http\Controllers\Api\V1\Admin\AdminDashboardController;
+use App\Http\Controllers\Api\V1\Admin\AdminUserController;
+use App\Http\Controllers\Api\V1\Admin\AdminWorkspaceController;
 use App\Http\Controllers\Api\V1\Auth\EmailVerificationNotificationController;
 use App\Http\Controllers\Api\V1\Auth\NewPasswordController;
 use App\Http\Controllers\Api\V1\Auth\PasswordResetLinkController;
@@ -67,5 +70,11 @@ Route::prefix('v1')->group(function (): void {
 
         Route::get('/notification-preferences', [NotificationPreferenceController::class, 'show'])->name('api.notification-preferences.show');
         Route::put('/notification-preferences', [NotificationPreferenceController::class, 'update'])->name('api.notification-preferences.update');
+
+        Route::prefix('admin')->middleware('platform-admin')->group(function (): void {
+            Route::get('/dashboard', AdminDashboardController::class)->name('api.admin.dashboard');
+            Route::patch('/users/{user}', [AdminUserController::class, 'update'])->name('api.admin.users.update');
+            Route::put('/workspaces/{workspace}/owner', [AdminWorkspaceController::class, 'transferOwner'])->name('api.admin.workspaces.owner');
+        });
     });
 });

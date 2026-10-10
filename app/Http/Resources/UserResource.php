@@ -19,6 +19,8 @@ class UserResource extends JsonResource
             'name' => $this->name,
             'email' => $this->email,
             'email_verified' => $this->email_verified_at !== null,
+            'is_platform_admin' => $this->is_platform_admin,
+            'status' => $this->status,
             'avatar_url' => $this->avatar_path ? asset('storage/'.$this->avatar_path) : null,
             'timezone' => $this->timezone,
             'locale' => $this->locale,

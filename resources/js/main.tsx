@@ -16,6 +16,7 @@ import {
     Plus,
     Search,
     Settings,
+    ShieldCheck,
     Sun,
     Users,
     X,
@@ -26,6 +27,7 @@ import { Input } from './components/ui/input';
 import { Label } from './components/ui/label';
 import { PlanningView } from './views/planning-view';
 import { InboxView } from './views/inbox-view';
+import { AdminView } from './views/admin-view';
 import '../css/app.css';
 
 configureEcho({ broadcaster: 'reverb' });
@@ -49,6 +51,8 @@ type User = {
     current_workspace: Workspace;
     workspaces: Workspace[];
     notification_preferences: Preferences;
+    is_platform_admin: boolean;
+    status: string;
 };
 type ApiError = { message?: string; errors?: Record<string, string[]> };
 type AuthMode = 'login' | 'register' | 'forgot' | 'reset';
@@ -202,7 +206,7 @@ function Field({ label, errors, ...props }: { label: string; errors: Record<stri
 
 function WorkspaceApp({ user, onUserChange }: { user: User; onUserChange: (user: User | null) => void }) {
     const [sidebarOpen, setSidebarOpen] = useState(false);
-    const [view, setView] = useState<'home' | 'planning' | 'inbox' | 'settings'>('home');
+    const [view, setView] = useState<'home' | 'planning' | 'inbox' | 'admin' | 'settings'>('home');
     const [theme, setTheme] = useState<'light' | 'dark'>(() => localStorage.getItem('weberflow-theme') === 'dark' ? 'dark' : 'light');
     const [query, setQuery] = useState('');
     const [workspaceMenu, setWorkspaceMenu] = useState(false);
@@ -248,6 +252,7 @@ function WorkspaceApp({ user, onUserChange }: { user: User; onUserChange: (user:
                     <NavButton active={view === 'planning'} icon={<FolderKanban size={17} />} label="Projects" onClick={() => setView('planning')} />
                     <NavButton active={view === 'planning'} icon={<CalendarRange size={17} />} label="Planning" onClick={() => setView('planning')} />
                     <NavButton icon={<Users size={17} />} label="People" />
+                    {user.is_platform_admin && <><p className="mt-6 px-3 text-[11px] font-bold uppercase tracking-[.12em] text-[#78827b]">Platform</p><NavButton active={view === 'admin'} icon={<ShieldCheck size={17} />} label="Admin" onClick={() => setView('admin')} /></>}
                 </nav>
                 <div className="grid gap-1 border-t border-[#dce3dc] p-3 dark:border-[#303a33]"><NavButton active={view === 'settings'} icon={<Settings size={17} />} label="Settings" onClick={() => setView('settings')} /><NavButton icon={<LogOut size={17} />} label="Sign out" onClick={logout} /></div>
             </aside>
@@ -261,7 +266,7 @@ function WorkspaceApp({ user, onUserChange }: { user: User; onUserChange: (user:
                     <span className="grid size-9 place-items-center rounded-full bg-brand-100 text-xs font-bold text-brand-700 dark:bg-brand-900 dark:text-brand-300">{initials}</span>
                 </header>
                 {!user.email_verified && <VerificationBanner />}
-                {view === 'settings' ? <SettingsView user={user} onUserChange={onUserChange} /> : view === 'planning' ? <PlanningView workspace={user.current_workspace} /> : view === 'inbox' ? <InboxView /> : <Dashboard user={user} query={query} />}
+                {view === 'settings' ? <SettingsView user={user} onUserChange={onUserChange} /> : view === 'planning' ? <PlanningView workspace={user.current_workspace} /> : view === 'inbox' ? <InboxView /> : view === 'admin' ? <AdminView /> : <Dashboard user={user} query={query} />}
             </div>
         </div>
     );

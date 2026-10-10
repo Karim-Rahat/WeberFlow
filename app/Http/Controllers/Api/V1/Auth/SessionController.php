@@ -14,7 +14,7 @@ class SessionController extends Controller
 {
     public function store(LoginRequest $request): UserResource
     {
-        if (! Auth::attempt($request->safe()->only(['email', 'password']), $request->boolean('remember'))) {
+        if (! Auth::attempt([...$request->safe()->only(['email', 'password']), 'status' => 'active'], $request->boolean('remember'))) {
             throw ValidationException::withMessages([
                 'email' => ['The provided credentials are incorrect.'],
             ]);
