@@ -1,0 +1,141 @@
+<!doctype html>
+<html lang="en">
+<head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <meta name="color-scheme" content="light dark">
+    <meta name="description" content="Interactive product and engineering flowchart for the office project management system.">
+    <title>WorkOS Project Flow</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Manrope:wght@400;500;600;700&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="/flowchart.css">
+</head>
+<body>
+    <div class="app-shell">
+        <header class="topbar">
+            <a class="brand" href="/" aria-label="WorkOS project flow home">
+                <span class="brand-mark" aria-hidden="true"><span></span><span></span><span></span></span>
+                <span>WorkOS</span>
+            </a>
+
+            <div class="topbar-actions">
+                <button class="icon-button" id="themeToggle" type="button" aria-label="Toggle color theme">
+                    <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 3v2m0 14v2M3 12h2m14 0h2M5.64 5.64l1.42 1.42m9.88 9.88 1.42 1.42m0-12.72-1.42 1.42M7.06 16.94l-1.42 1.42M16 12a4 4 0 1 1-8 0 4 4 0 0 1 8 0Z"/></svg>
+                </button>
+                <a class="primary-button" href="/app">Open application <span aria-hidden="true">→</span></a>
+            </div>
+        </header>
+
+        <main>
+            <section class="hero" aria-labelledby="pageTitle">
+                <div>
+                    <p class="eyebrow">Product blueprint · v1.0</p>
+                    <h1 id="pageTitle">From invitation to impact.</h1>
+                    <p class="hero-copy">Explore the complete path from workspace setup through daily execution, reporting, automation, and enterprise operations.</p>
+                </div>
+                <div class="progress-card" aria-label="Project delivery summary">
+                    <div><span>5</span><small>releases</small></div>
+                    <div><span>10</span><small>domains</small></div>
+                    <div><span>4 wk</span><small>MVP target</small></div>
+                </div>
+            </section>
+
+            <section class="controls" aria-label="Flowchart controls">
+                <div class="search-wrap">
+                    <svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="11" cy="11" r="7"/><path d="m20 20-4-4"/></svg>
+                    <label class="sr-only" for="flowSearch">Search the project flow</label>
+                    <input id="flowSearch" type="search" placeholder="Search features, services, or phases…" autocomplete="off">
+                    <kbd>/</kbd>
+                </div>
+                <div class="phase-filters" id="phaseFilters" aria-label="Filter by release">
+                    <button type="button" class="filter active" data-phase="all" aria-pressed="true">All</button>
+                    <button type="button" class="filter" data-phase="foundation" aria-pressed="false">Foundation</button>
+                    <button type="button" class="filter" data-phase="mvp" aria-pressed="false">MVP</button>
+                    <button type="button" class="filter" data-phase="planning" aria-pressed="false">Planning</button>
+                    <button type="button" class="filter" data-phase="advanced" aria-pressed="false">Advanced</button>
+                    <button type="button" class="filter" data-phase="enterprise" aria-pressed="false">Enterprise</button>
+                </div>
+            </section>
+
+            <section class="journey" aria-labelledby="journeyTitle">
+                <div class="section-heading">
+                    <div>
+                        <p class="eyebrow">User journey</p>
+                        <h2 id="journeyTitle">The core work loop</h2>
+                    </div>
+                    <p>Select any step to inspect its actors, output, and release target.</p>
+                </div>
+                <div class="journey-track" id="journeyTrack" role="list"></div>
+            </section>
+
+            <section class="architecture" aria-labelledby="architectureTitle">
+                <div class="section-heading">
+                    <div>
+                        <p class="eyebrow">System map</p>
+                        <h2 id="architectureTitle">Product and platform flow</h2>
+                    </div>
+                    <p id="resultCount" aria-live="polite"></p>
+                </div>
+
+                <div class="flow-board" id="flowBoard">
+                    <svg class="connectors" id="connectors" aria-hidden="true"></svg>
+                    <div class="flow-columns" id="flowColumns"></div>
+                </div>
+                <div class="empty-state" id="emptyState" hidden>
+                    <strong>No matching capabilities</strong>
+                    <span>Try a broader keyword or select another release.</span>
+                </div>
+            </section>
+
+            <section class="delivery" aria-labelledby="deliveryTitle">
+                <div class="section-heading">
+                    <div>
+                        <p class="eyebrow">Delivery sequence</p>
+                        <h2 id="deliveryTitle">Five releases, one stable core</h2>
+                    </div>
+                </div>
+                <div class="release-grid" id="releaseGrid"></div>
+            </section>
+
+            <section class="technical-flow" aria-labelledby="technicalTitle">
+                <div class="section-heading">
+                    <div>
+                        <p class="eyebrow">Request lifecycle</p>
+                        <h2 id="technicalTitle">What happens when work changes</h2>
+                    </div>
+                </div>
+                <ol class="request-path">
+                    <li><span>01</span><div><strong>React action</strong><small>Validated form or optimistic interaction</small></div></li>
+                    <li><span>02</span><div><strong>REST API</strong><small>Sanctum session, request validation, policy check</small></div></li>
+                    <li><span>03</span><div><strong>Domain action</strong><small>Transaction updates MySQL and records activity</small></div></li>
+                    <li><span>04</span><div><strong>After commit</strong><small>Event dispatches queue jobs safely</small></div></li>
+                    <li><span>05</span><div><strong>Async delivery</strong><small>Reverb, in-app inbox, email, integrations</small></div></li>
+                    <li><span>06</span><div><strong>Client sync</strong><small>TanStack Query reconciles every active view</small></div></li>
+                </ol>
+            </section>
+        </main>
+
+        <footer>
+            <span>WorkOS project blueprint</span>
+            <a href="/implementation-plan">Read implementation plan</a>
+        </footer>
+    </div>
+
+    <dialog id="detailDialog" aria-labelledby="dialogTitle">
+        <form method="dialog" class="dialog-shell">
+            <button class="dialog-close" value="close" aria-label="Close details">×</button>
+            <p class="eyebrow" id="dialogPhase"></p>
+            <h2 id="dialogTitle"></h2>
+            <p id="dialogDescription"></p>
+            <dl>
+                <div><dt>Primary actor</dt><dd id="dialogActor"></dd></div>
+                <div><dt>Output</dt><dd id="dialogOutput"></dd></div>
+                <div><dt>Release</dt><dd id="dialogRelease"></dd></div>
+            </dl>
+        </form>
+    </dialog>
+
+    <script src="/flowchart.js" defer></script>
+</body>
+</html>
