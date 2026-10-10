@@ -35,6 +35,11 @@ class Workspace extends Model
             ->withTimestamps();
     }
 
+    public function projects(): HasMany
+    {
+        return $this->hasMany(Project::class);
+    }
+
     public function roleFor(User $user): ?WorkspaceRole
     {
         $membership = $this->members()->whereKey($user->getKey())->first()?->pivot;

@@ -17,6 +17,8 @@ class WorkspaceMember extends Pivot
 
     public $incrementing = true;
 
+    protected $table = 'workspace_members';
+
     public function workspace(): BelongsTo
     {
         return $this->belongsTo(Workspace::class);

@@ -35,6 +35,23 @@
   box-shadow: inset 3px 0 0 #22c55e;
 }
 
+.release.in-progress {
+  border-color: rgba(59, 130, 246, .45);
+  box-shadow: inset 3px 0 0 #3b82f6;
+}
+
+.progress-badge {
+  display: inline-flex;
+  padding: .2rem .48rem;
+  border: 1px solid rgba(59, 130, 246, .35);
+  border-radius: 999px;
+  background: rgba(59, 130, 246, .1);
+  color: #2563eb;
+  font-size: .68rem;
+  font-weight: 800;
+  white-space: nowrap;
+}
+
 .release-completion {
   display: flex;
   align-items: center;
@@ -52,6 +69,9 @@ html[data-theme="dark"] .completion-date,
 body.dark .completion-summary strong,
 body.dark .completion-badge,
 body.dark .completion-date { color: #86efac; }
+
+html[data-theme="dark"] .progress-badge,
+body.dark .progress-badge { color: #93c5fd; }
 
 @media (max-width: 640px) {
   .completion-summary { align-items: flex-start; flex-direction: column; }

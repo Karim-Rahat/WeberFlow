@@ -9,6 +9,10 @@ use App\Http\Controllers\Api\V1\Auth\VerifyEmailController;
 use App\Http\Controllers\Api\V1\CurrentWorkspaceController;
 use App\Http\Controllers\Api\V1\NotificationPreferenceController;
 use App\Http\Controllers\Api\V1\ProfileController;
+use App\Http\Controllers\Api\V1\ProjectController;
+use App\Http\Controllers\Api\V1\ProjectSectionController;
+use App\Http\Controllers\Api\V1\ProjectTaskController;
+use App\Http\Controllers\Api\V1\TaskDependencyController;
 use App\Http\Controllers\Api\V1\WorkspaceController;
 use Illuminate\Support\Facades\Route;
 
@@ -36,6 +40,14 @@ Route::prefix('v1')->group(function (): void {
         Route::post('/workspaces', [WorkspaceController::class, 'store'])->name('api.workspaces.store');
         Route::get('/workspaces/{workspace}', [WorkspaceController::class, 'show'])->name('api.workspaces.show');
         Route::put('/current-workspace', CurrentWorkspaceController::class)->name('api.current-workspace.update');
+
+        Route::get('/workspaces/{workspace}/projects', [ProjectController::class, 'index'])->name('api.projects.index');
+        Route::post('/workspaces/{workspace}/projects', [ProjectController::class, 'store'])->name('api.projects.store');
+        Route::get('/projects/{project}', [ProjectController::class, 'show'])->name('api.projects.show');
+        Route::post('/projects/{project}/sections', [ProjectSectionController::class, 'store'])->name('api.project-sections.store');
+        Route::post('/projects/{project}/tasks', [ProjectTaskController::class, 'store'])->name('api.project-tasks.store');
+        Route::post('/tasks/{task}/dependencies', [TaskDependencyController::class, 'store'])->name('api.task-dependencies.store');
+        Route::delete('/tasks/{task}/dependencies', [TaskDependencyController::class, 'destroy'])->name('api.task-dependencies.destroy');
 
         Route::get('/notification-preferences', [NotificationPreferenceController::class, 'show'])->name('api.notification-preferences.show');
         Route::put('/notification-preferences', [NotificationPreferenceController::class, 'update'])->name('api.notification-preferences.update');
