@@ -60,7 +60,7 @@
   function markReleaseInProgress() {
     document.querySelectorAll('.release').forEach((card) => {
       const label = card.querySelector('span')?.textContent?.trim();
-      if (label !== 'Release 2' || card.classList.contains('in-progress')) return;
+      if (label !== 'Release 1' || card.classList.contains('in-progress')) return;
 
       card.classList.add('in-progress');
       const labelElement = card.querySelector('span');

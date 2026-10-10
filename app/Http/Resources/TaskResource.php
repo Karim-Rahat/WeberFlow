@@ -21,6 +21,9 @@ class TaskResource extends JsonResource
             'section_id' => $this->section_id,
             'assignee' => $this->whenLoaded('assignee', fn (): ?array => $this->assignee ? ['id' => $this->assignee->id, 'name' => $this->assignee->name] : null),
             'predecessors' => TaskResource::collection($this->whenLoaded('predecessors')),
+            'comments' => $this->whenLoaded('comments', fn () => $this->comments->map(fn ($comment): array => ['id' => $comment->id, 'body' => $comment->body, 'author' => ['id' => $comment->author->id, 'name' => $comment->author->name], 'created_at' => $comment->created_at->toISOString()])),
+            'attachments' => $this->whenLoaded('attachments', fn () => $this->attachments->map(fn ($attachment): array => ['id' => $attachment->id, 'name' => $attachment->name, 'size' => $attachment->size, 'url' => route('api.attachments.show', $attachment)])),
+            'activity' => $this->whenLoaded('activities', fn () => $this->activities->map(fn ($activity): array => ['id' => $activity->id, 'event' => $activity->event, 'actor' => $activity->actor?->name, 'created_at' => $activity->created_at->toISOString()])),
         ];
     }
 }

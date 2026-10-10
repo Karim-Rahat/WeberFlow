@@ -56,6 +56,21 @@ class Task extends Model
         return $this->belongsToMany(self::class, 'task_dependencies', 'predecessor_task_id', 'dependent_task_id')->withTimestamps();
     }
 
+    public function comments(): HasMany
+    {
+        return $this->hasMany(Comment::class)->oldest();
+    }
+
+    public function attachments(): HasMany
+    {
+        return $this->hasMany(Attachment::class);
+    }
+
+    public function activities(): HasMany
+    {
+        return $this->hasMany(ActivityLog::class)->latest();
+    }
+
     protected function casts(): array
     {
         return ['start_date' => 'date', 'due_date' => 'date', 'is_milestone' => 'boolean', 'completed_at' => 'datetime'];
