@@ -4,6 +4,13 @@
     'Workspace',
     'REST API',
     'Core Database',
+    'Projects',
+    'Tasks & subtasks',
+    'Flexible views',
+    'Comments & mentions',
+    'Files & activity',
+    'Inbox',
+    'Mail & real-time',
   ]);
   const completionDate = 'October 10, 2026';
 
@@ -16,8 +23,8 @@
     const summary = document.createElement('div');
     summary.className = 'completion-summary';
     summary.innerHTML = `
-      <strong>✓ Release 0 — Foundation complete</strong>
-      <span>4 capabilities complete · ${completionDate}</span>
+      <strong>✓ Releases 0 and 1 complete</strong>
+      <span>11 capabilities complete · ${completionDate}</span>
     `;
     target.insertAdjacentElement('afterend', summary);
   }
@@ -38,7 +45,7 @@
   function markRelease() {
     document.querySelectorAll('.release').forEach((card) => {
       const label = card.querySelector('span')?.textContent?.trim();
-      if (label !== 'Release 0' || card.classList.contains('completed')) return;
+      if (!['Release 0', 'Release 1'].includes(label) || card.classList.contains('completed')) return;
 
       card.classList.add('completed');
       const labelElement = card.querySelector('span');
@@ -57,28 +64,10 @@
     });
   }
 
-  function markReleaseInProgress() {
-    document.querySelectorAll('.release').forEach((card) => {
-      const label = card.querySelector('span')?.textContent?.trim();
-      if (label !== 'Release 1' || card.classList.contains('in-progress')) return;
-
-      card.classList.add('in-progress');
-      const labelElement = card.querySelector('span');
-      if (labelElement) {
-        const row = document.createElement('div');
-        row.className = 'release-completion';
-        labelElement.before(row);
-        row.append(labelElement);
-        row.insertAdjacentHTML('beforeend', '<span class="progress-badge">In progress</span>');
-      }
-    });
-  }
-
   function updateTracking() {
     addSummary();
     markCapabilities();
     markRelease();
-    markReleaseInProgress();
   }
 
   updateTracking();

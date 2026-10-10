@@ -2,6 +2,7 @@
 
 namespace App\Http\Controllers\Api\V1;
 
+use App\Events\TaskChanged;
 use App\Http\Controllers\Controller;
 use App\Http\Requests\UpdateTaskRequest;
 use App\Http\Resources\TaskResource;
@@ -40,12 +41,15 @@ class TaskController extends Controller
             $task->assignee->notify((new TaskAssigned($task))->afterCommit());
         }
 
+        TaskChanged::dispatch($task, 'updated');
+
         return new TaskResource($task->load(['assignee', 'predecessors']));
     }
 
     public function destroy(Request $request, Task $task): JsonResponse
     {
         $this->authorizeTask($request, $task, 'update');
+        TaskChanged::dispatch($task, 'deleted');
         $task->delete();
 
         return response()->json(status: 204);

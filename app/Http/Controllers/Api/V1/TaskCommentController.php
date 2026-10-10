@@ -2,6 +2,7 @@
 
 namespace App\Http\Controllers\Api\V1;
 
+use App\Events\TaskChanged;
 use App\Http\Controllers\Controller;
 use App\Http\Requests\StoreCommentRequest;
 use App\Models\Task;
@@ -40,6 +41,8 @@ class TaskCommentController extends Controller
         $recipients->each(function (User $recipient) use ($comment, $mentioned): void {
             $recipient->notify((new TaskCommented($comment->loadMissing(['task', 'author']), $mentioned->contains($recipient)))->afterCommit());
         });
+
+        TaskChanged::dispatch($task, 'commented');
 
         return response()->json(['data' => $comment->load('author:id,name')], 201);
     }

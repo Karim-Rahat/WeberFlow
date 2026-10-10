@@ -3,12 +3,14 @@
 namespace Tests\Feature;
 
 use App\Actions\CreateUserWithWorkspace;
+use App\Events\TaskChanged;
 use App\Models\Project;
 use App\Models\Task;
 use App\Models\User;
 use App\Notifications\TaskAssigned;
 use Illuminate\Foundation\Testing\LazilyRefreshDatabase;
 use Illuminate\Http\UploadedFile;
+use Illuminate\Support\Facades\Event;
 use Illuminate\Support\Facades\Notification;
 use Illuminate\Support\Facades\Storage;
 use Tests\TestCase;
@@ -19,8 +21,9 @@ class ReleaseOneCoreWorkTest extends TestCase
 
     public function test_assigning_task_creates_activity_and_queues_notification(): void
     {
-        Notification::fake([TaskAssigned::class]);
         [$owner, $member, $project] = $this->workspaceTeam();
+        Notification::fake([TaskAssigned::class]);
+        Event::fake([TaskChanged::class]);
 
         $response = $this->actingAs($owner)->postJson('/api/v1/projects/'.$project->id.'/tasks', [
             'title' => 'Prepare release notes',
@@ -31,6 +34,7 @@ class ReleaseOneCoreWorkTest extends TestCase
         $response->assertCreated()->assertJsonPath('data.assignee.id', $member->id);
         $this->assertDatabaseHas('activity_logs', ['task_id' => $response->json('data.id'), 'event' => 'task.created']);
         Notification::assertSentTo($member, TaskAssigned::class, fn (TaskAssigned $notification): bool => $notification->task->title === 'Prepare release notes');
+        Event::assertDispatched(TaskChanged::class, fn (TaskChanged $event): bool => $event->action === 'created' && $event->task->id === $response->json('data.id'));
     }
 
     public function test_member_comments_on_task_and_activity_is_recorded(): void

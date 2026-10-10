@@ -7,6 +7,7 @@ use App\Http\Requests\StoreWorkspaceRequest;
 use App\Http\Resources\WorkspaceResource;
 use App\Models\Workspace;
 use App\WorkspaceRole;
+use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Http\Resources\Json\AnonymousResourceCollection;
 use Illuminate\Support\Facades\DB;
@@ -52,5 +53,12 @@ class WorkspaceController extends Controller
         abort_unless($request->user()->workspaces()->whereKey($workspace->getKey())->exists(), 404);
 
         return new WorkspaceResource($workspace->loadCount('members'));
+    }
+
+    public function members(Request $request, Workspace $workspace): JsonResponse
+    {
+        abort_unless($request->user()->workspaces()->whereKey($workspace->getKey())->exists(), 404);
+
+        return response()->json(['data' => $workspace->members()->wherePivot('status', 'active')->orderBy('name')->get(['users.id', 'users.name', 'users.email'])]);
     }
 }

@@ -43,6 +43,7 @@ Route::prefix('v1')->group(function (): void {
         Route::get('/workspaces', [WorkspaceController::class, 'index'])->name('api.workspaces.index');
         Route::post('/workspaces', [WorkspaceController::class, 'store'])->name('api.workspaces.store');
         Route::get('/workspaces/{workspace}', [WorkspaceController::class, 'show'])->name('api.workspaces.show');
+        Route::get('/workspaces/{workspace}/members', [WorkspaceController::class, 'members'])->name('api.workspaces.members');
         Route::put('/current-workspace', CurrentWorkspaceController::class)->name('api.current-workspace.update');
 
         Route::get('/workspaces/{workspace}/projects', [ProjectController::class, 'index'])->name('api.projects.index');

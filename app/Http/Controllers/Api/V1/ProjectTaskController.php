@@ -2,6 +2,7 @@
 
 namespace App\Http\Controllers\Api\V1;
 
+use App\Events\TaskChanged;
 use App\Http\Controllers\Controller;
 use App\Http\Requests\StoreTaskRequest;
 use App\Http\Resources\TaskResource;
@@ -28,6 +29,8 @@ class ProjectTaskController extends Controller
         if ($task->assignee_id && $task->assignee_id !== $request->user()->id) {
             $task->assignee->notify((new TaskAssigned($task))->afterCommit());
         }
+
+        TaskChanged::dispatch($task, 'created');
 
         return new TaskResource($task->load(['assignee', 'predecessors']));
     }
