@@ -2,6 +2,7 @@
 
 namespace App\Http\Controllers\Api\V1;
 
+use App\Events\TaskChanged;
 use App\Http\Controllers\Controller;
 use App\Http\Requests\StoreTaskDependencyRequest;
 use App\Http\Resources\TaskResource;
@@ -26,6 +27,8 @@ class TaskDependencyController extends Controller
         }
 
         $task->predecessors()->syncWithoutDetaching([$predecessorId]);
+        $task->activities()->create(['workspace_id' => $task->workspace_id, 'actor_id' => $request->user()->id, 'event' => 'dependency.created', 'metadata' => ['predecessor_task_id' => $predecessorId]]);
+        TaskChanged::dispatch($task, 'dependency.updated');
 
         return new TaskResource($task->load(['assignee', 'predecessors']));
     }
@@ -35,6 +38,8 @@ class TaskDependencyController extends Controller
         abort_unless($request->user()->current_workspace_id === $task->workspace_id, 404);
         Gate::authorize('update', $task->project);
         $task->predecessors()->detach($request->integer('predecessor_task_id'));
+        $task->activities()->create(['workspace_id' => $task->workspace_id, 'actor_id' => $request->user()->id, 'event' => 'dependency.deleted', 'metadata' => ['predecessor_task_id' => $request->integer('predecessor_task_id')]]);
+        TaskChanged::dispatch($task, 'dependency.updated');
 
         return response()->json(status: 204);
     }

@@ -84,6 +84,22 @@ class PlanningManagementTest extends TestCase
         $this->assertDatabaseMissing('task_dependencies', ['predecessor_task_id' => $second->id, 'dependent_task_id' => $first->id]);
     }
 
+    public function test_project_workload_groups_completion_and_blocked_counts_by_assignee(): void
+    {
+        $user = $this->createUserWithWorkspace('planner@example.com');
+        $project = Project::factory()->create(['workspace_id' => $user->current_workspace_id, 'owner_id' => $user->id]);
+        Task::factory()->create(['project_id' => $project->id, 'workspace_id' => $project->workspace_id, 'creator_id' => $user->id, 'assignee_id' => $user->id, 'status' => 'complete']);
+        Task::factory()->create(['project_id' => $project->id, 'workspace_id' => $project->workspace_id, 'creator_id' => $user->id, 'assignee_id' => $user->id, 'status' => 'blocked']);
+
+        $response = $this->actingAs($user)->getJson('/api/v1/projects/'.$project->id.'/workload');
+
+        $response->assertOk()
+            ->assertJsonPath('data.0.assignee.id', $user->id)
+            ->assertJsonPath('data.0.total', 2)
+            ->assertJsonPath('data.0.completed', 1)
+            ->assertJsonPath('data.0.blocked', 1);
+    }
+
     private function createUserWithWorkspace(string $email): User
     {
         return app(CreateUserWithWorkspace::class)->handle([

@@ -64,10 +64,28 @@
     });
   }
 
+  function markReleaseInProgress() {
+    document.querySelectorAll('.release').forEach((card) => {
+      const label = card.querySelector('span')?.textContent?.trim();
+      if (label !== 'Release 2' || card.classList.contains('in-progress')) return;
+
+      card.classList.add('in-progress');
+      const labelElement = card.querySelector('span');
+      if (labelElement) {
+        const row = document.createElement('div');
+        row.className = 'release-completion';
+        labelElement.before(row);
+        row.append(labelElement);
+        row.insertAdjacentHTML('beforeend', '<span class="progress-badge">In progress</span>');
+      }
+    });
+  }
+
   function updateTracking() {
     addSummary();
     markCapabilities();
     markRelease();
+    markReleaseInProgress();
   }
 
   updateTracking();

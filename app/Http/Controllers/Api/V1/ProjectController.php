@@ -7,6 +7,7 @@ use App\Http\Requests\StoreProjectRequest;
 use App\Http\Resources\ProjectResource;
 use App\Models\Project;
 use App\Models\Workspace;
+use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Http\Resources\Json\AnonymousResourceCollection;
 use Illuminate\Support\Facades\Gate;
@@ -45,6 +46,27 @@ class ProjectController extends Controller
         return new ProjectResource($project->load([
             'tasks' => fn ($query) => $query->with(['assignee', 'predecessors.assignee']),
         ])->loadCount('tasks'));
+    }
+
+    public function workload(Request $request, Project $project): JsonResponse
+    {
+        $this->ensureCurrentWorkspace($request, $project);
+        Gate::authorize('view', $project);
+
+        $rows = $project->tasks()
+            ->reorder()
+            ->selectRaw("assignee_id, count(*) as total, sum(case when status = 'complete' then 1 else 0 end) as completed, sum(case when status = 'blocked' then 1 else 0 end) as blocked")
+            ->with('assignee:id,name')
+            ->groupBy('assignee_id')
+            ->get()
+            ->map(fn ($row): array => [
+                'assignee' => $row->assignee ? ['id' => $row->assignee->id, 'name' => $row->assignee->name] : null,
+                'total' => (int) $row->total,
+                'completed' => (int) $row->completed,
+                'blocked' => (int) $row->blocked,
+            ]);
+
+        return response()->json(['data' => $rows]);
     }
 
     private function ensureWorkspaceMember(Request $request, Workspace $workspace): void

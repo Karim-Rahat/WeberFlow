@@ -49,6 +49,7 @@ Route::prefix('v1')->group(function (): void {
         Route::get('/workspaces/{workspace}/projects', [ProjectController::class, 'index'])->name('api.projects.index');
         Route::post('/workspaces/{workspace}/projects', [ProjectController::class, 'store'])->name('api.projects.store');
         Route::get('/projects/{project}', [ProjectController::class, 'show'])->name('api.projects.show');
+        Route::get('/projects/{project}/workload', [ProjectController::class, 'workload'])->name('api.projects.workload');
         Route::post('/projects/{project}/sections', [ProjectSectionController::class, 'store'])->name('api.project-sections.store');
         Route::post('/projects/{project}/tasks', [ProjectTaskController::class, 'store'])->name('api.project-tasks.store');
         Route::get('/tasks/{task}', [TaskController::class, 'show'])->name('api.tasks.show');

@@ -1,6 +1,6 @@
 import { useEffect, useState, type FormEvent } from 'react';
 import { useEcho } from '@laravel/echo-react';
-import { Activity, Download, LoaderCircle, MessageSquare, Paperclip, Plus, X } from 'lucide-react';
+import { Activity, Download, Link2, LoaderCircle, MessageSquare, Paperclip, Plus, Trash2, X } from 'lucide-react';
 import { Button } from '../components/ui/button';
 import { Input } from '../components/ui/input';
 import { Label } from '../components/ui/label';
@@ -11,6 +11,7 @@ type Comment = { id: number; body: string; author: { id: number; name: string };
 type Attachment = { id: number; name: string; size: number; url: string };
 type ActivityItem = { id: number; event: string; actor: string | null; created_at: string };
 type DetailedTask = Task & { assignee: Member | null; comments: Comment[]; attachments: Attachment[]; activity: ActivityItem[] };
+type ProjectTasks = { data: { tasks: Task[] } };
 
 async function request<T>(url: string, options: RequestInit = {}): Promise<T> {
     const csrfCookie = document.cookie.split('; ').find((cookie) => cookie.startsWith('XSRF-TOKEN='))?.split('=')[1];
@@ -22,15 +23,18 @@ async function request<T>(url: string, options: RequestInit = {}): Promise<T> {
 export function TaskDetail({ taskId, projectId, workspace, onClose, onChanged }: { taskId: number; projectId: number; workspace: Workspace; onClose: () => void; onChanged: () => void }) {
     const [task, setTask] = useState<DetailedTask | null>(null);
     const [members, setMembers] = useState<Member[]>([]);
+    const [projectTasks, setProjectTasks] = useState<Task[]>([]);
     const [message, setMessage] = useState('');
 
     async function load() {
-        const [{ data: taskData }, { data: memberData }] = await Promise.all([
+        const [{ data: taskData }, { data: memberData }, projectData] = await Promise.all([
             request<{ data: DetailedTask }>(`/api/v1/tasks/${taskId}`),
             request<{ data: Member[] }>(`/api/v1/workspaces/${workspace.id}/members`),
+            request<ProjectTasks>(`/api/v1/projects/${projectId}`),
         ]);
         setTask(taskData);
         setMembers(memberData);
+        setProjectTasks(projectData.data.tasks);
     }
 
     useEffect(() => { load(); }, [taskId, workspace.id]);
@@ -72,6 +76,20 @@ export function TaskDetail({ taskId, projectId, workspace, onClose, onChanged }:
         setMessage('Attachment uploaded privately.');
     }
 
+    async function addDependency(event: FormEvent<HTMLFormElement>) {
+        event.preventDefault();
+        const predecessorTaskId = Number(new FormData(event.currentTarget).get('predecessor_task_id'));
+        await request(`/api/v1/tasks/${taskId}/dependencies`, { method: 'POST', body: JSON.stringify({ predecessor_task_id: predecessorTaskId }) });
+        await load();
+        setMessage('Dependency added.');
+    }
+
+    async function removeDependency(predecessorTaskId: number) {
+        await request(`/api/v1/tasks/${taskId}/dependencies`, { method: 'DELETE', body: JSON.stringify({ predecessor_task_id: predecessorTaskId }) });
+        await load();
+        setMessage('Dependency removed.');
+    }
+
     return <div className="fixed inset-0 z-50 flex justify-end bg-black/35" onMouseDown={(event) => { if (event.currentTarget === event.target) onClose(); }}>
         <aside className="h-full w-full max-w-2xl overflow-y-auto border-l border-[#dce3dc] bg-[#f7f8f4] p-5 shadow-2xl dark:border-[#303a33] dark:bg-[#111512] sm:p-7">
             {!task ? <div className="grid h-full place-items-center"><LoaderCircle className="animate-spin text-brand-600" /></div> : <div className="grid gap-6">
@@ -83,6 +101,7 @@ export function TaskDetail({ taskId, projectId, workspace, onClose, onChanged }:
                     <SelectField label="Assignee" value={task.assignee?.id ? String(task.assignee.id) : ''} onChange={(value) => update({ assignee_id: value ? Number(value) : null })} options={[['', 'Unassigned'], ...members.map((member) => [String(member.id), member.name])]} />
                 </section>
                 <section className="grid gap-3 rounded-2xl border border-[#dce3dc] bg-white p-5 dark:border-[#303a33] dark:bg-[#181d1a]"><h3 className="flex items-center gap-2 font-bold"><Plus size={16} />Subtask</h3><form className="flex gap-2" onSubmit={addSubtask}><Input name="title" required placeholder="Add a smaller step" /><Button type="submit">Add</Button></form></section>
+                <section className="grid gap-3 rounded-2xl border border-[#dce3dc] bg-white p-5 dark:border-[#303a33] dark:bg-[#181d1a]"><h3 className="flex items-center gap-2 font-bold"><Link2 size={16} />Dependencies</h3>{task.blocked_by_dependency && <p className="rounded-lg bg-amber-50 p-2 text-xs font-bold text-amber-800 dark:bg-amber-950 dark:text-amber-300">Blocked until predecessor work is complete.</p>}<div className="grid gap-2">{task.predecessors.map((predecessor) => <div key={predecessor.id} className="flex items-center justify-between rounded-lg bg-[#f4f6f1] p-2.5 text-sm dark:bg-[#222a25]"><span>{predecessor.title}</span><button aria-label="Remove dependency" onClick={() => removeDependency(predecessor.id)}><Trash2 size={15} /></button></div>)}</div><form className="flex gap-2" onSubmit={addDependency}><select name="predecessor_task_id" required className="h-10 min-w-0 flex-1 rounded-xl border border-[#dce3dc] bg-transparent px-3 text-sm dark:border-[#303a33]"><option value="">Choose predecessor</option>{projectTasks.filter((candidate) => candidate.id !== taskId && !task.predecessors.some((item) => item.id === candidate.id)).map((candidate) => <option key={candidate.id} value={candidate.id}>{candidate.title}</option>)}</select><Button type="submit">Link</Button></form></section>
                 <section className="grid gap-4 rounded-2xl border border-[#dce3dc] bg-white p-5 dark:border-[#303a33] dark:bg-[#181d1a]"><h3 className="flex items-center gap-2 font-bold"><MessageSquare size={16} />Comments</h3><div className="grid gap-3">{task.comments.map((comment) => <article key={comment.id} className="rounded-xl bg-[#f4f6f1] p-3 dark:bg-[#222a25]"><strong className="text-sm">{comment.author.name}</strong><p className="mt-1 whitespace-pre-wrap text-sm">{comment.body}</p></article>)}{task.comments.length === 0 && <p className="text-sm text-[#68736c]">No comments yet.</p>}</div><form className="grid gap-2" onSubmit={addComment}><textarea name="body" required rows={3} placeholder="Comment or mention @person@example.com" className="rounded-xl border border-[#dce3dc] bg-transparent p-3 text-sm outline-none focus:border-brand-500 dark:border-[#303a33]" /><Button type="submit">Post comment</Button></form></section>
                 <section className="grid gap-4 rounded-2xl border border-[#dce3dc] bg-white p-5 dark:border-[#303a33] dark:bg-[#181d1a]"><h3 className="flex items-center gap-2 font-bold"><Paperclip size={16} />Attachments</h3>{task.attachments.map((file) => <a key={file.id} href={file.url} className="flex items-center gap-2 text-sm font-semibold text-brand-600"><Download size={15} />{file.name}</a>)}<form className="flex flex-wrap gap-2" onSubmit={upload}><Input name="file" type="file" required className="flex-1" /><Button type="submit">Upload</Button></form></section>
                 <section className="grid gap-3 rounded-2xl border border-[#dce3dc] bg-white p-5 dark:border-[#303a33] dark:bg-[#181d1a]"><h3 className="flex items-center gap-2 font-bold"><Activity size={16} />Activity</h3>{task.activity.map((item) => <p key={item.id} className="text-sm"><strong>{item.actor ?? 'System'}</strong> · {item.event.replace('.', ' ')}</p>)}</section>
