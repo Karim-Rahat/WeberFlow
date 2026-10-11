@@ -25,7 +25,7 @@ import { Button } from './components/ui/button';
 import { Card } from './components/ui/card';
 import { Input } from './components/ui/input';
 import { Label } from './components/ui/label';
-import { PlanningView } from './views/planning-view';
+import { AsanaPlanningView } from './views/asana-planning-view';
 import { InboxView } from './views/inbox-view';
 import { AdminView } from './views/admin-view';
 import '../css/app.css';
@@ -266,7 +266,7 @@ function WorkspaceApp({ user, onUserChange }: { user: User; onUserChange: (user:
                     <span className="grid size-9 place-items-center rounded-full bg-brand-100 text-xs font-bold text-brand-700 dark:bg-brand-900 dark:text-brand-300">{initials}</span>
                 </header>
                 {!user.email_verified && <VerificationBanner />}
-                {view === 'settings' ? <SettingsView user={user} onUserChange={onUserChange} /> : view === 'planning' ? <PlanningView workspace={user.current_workspace} /> : view === 'inbox' ? <InboxView /> : view === 'admin' ? <AdminView /> : <Dashboard user={user} query={query} onCreateTask={() => setView('planning')} />}
+                {view === 'settings' ? <SettingsView user={user} onUserChange={onUserChange} /> : view === 'planning' ? <AsanaPlanningView workspace={user.current_workspace} /> : view === 'inbox' ? <InboxView /> : view === 'admin' ? <AdminView /> : <Dashboard user={user} query={query} onCreateTask={() => setView('planning')} />}
             </div>
         </div>
     );
