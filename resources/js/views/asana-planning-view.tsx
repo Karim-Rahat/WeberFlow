@@ -15,6 +15,11 @@ type Project = {
 };
 
 type View = 'list' | 'board' | 'timeline' | 'calendar' | 'dashboard';
+type Member = { id: number; name: string; email: string };
+type GroupBy = 'section' | 'status' | 'priority' | 'assignee';
+type SortBy = 'position' | 'title' | 'due_date' | 'priority' | 'assignee';
+type Filters = { status: string; priority: string; assignee: string; due: string };
+type ListOptions = { showCompleted: boolean; compact: boolean; assignee: boolean; dueDate: boolean; priority: boolean; status: boolean };
 
 const views: { id: View; label: string }[] = [
     { id: 'list', label: 'List' },
@@ -26,14 +31,22 @@ const views: { id: View; label: string }[] = [
 
 export function AsanaPlanningView({ workspace, initialProjectId = null, initialTaskId = null }: { workspace: Workspace; initialProjectId?: number | null; initialTaskId?: number | null }) {
     const [projects, setProjects] = useState<Project[]>([]);
+    const [members, setMembers] = useState<Member[]>([]);
     const [selected, setSelected] = useState<Project | null>(null);
     const [view, setView] = useState<View>('list');
     const [query, setQuery] = useState('');
     const [notice, setNotice] = useState('');
     const [showNewProject, setShowNewProject] = useState(false);
     const [selectedTaskId, setSelectedTaskId] = useState<number | null>(null);
+    const [openMenu, setOpenMenu] = useState<'filter' | 'sort' | 'group' | 'options' | null>(null);
+    const [filters, setFilters] = useState<Filters>({ status: 'all', priority: 'all', assignee: 'all', due: 'all' });
+    const [sortBy, setSortBy] = useState<SortBy>('position');
+    const [sortDirection, setSortDirection] = useState<'asc' | 'desc'>('asc');
+    const [groupBy, setGroupBy] = useState<GroupBy>('section');
+    const [listOptions, setListOptions] = useState<ListOptions>({ showCompleted: true, compact: false, assignee: true, dueDate: true, priority: true, status: true });
 
     useEffect(() => {
+        request<{ data: Member[] }>(`/api/v1/workspaces/${workspace.id}/members`).then(({ data }) => setMembers(data));
         request<{ data: Project[] }>(`/api/v1/workspaces/${workspace.id}/projects`).then(({ data }) => {
             setProjects(data);
             const initialProject = data.find((project) => project.id === initialProjectId) ?? data[0];
@@ -137,7 +150,36 @@ export function AsanaPlanningView({ workspace, initialProjectId = null, initialT
         await refreshProject();
     }
 
-    const filteredTasks = useMemo(() => (selected?.tasks ?? []).filter((task) => task.title.toLowerCase().includes(query.toLowerCase())), [selected?.tasks, query]);
+    const filteredTasks = useMemo(() => {
+        const priorityOrder = { low: 1, medium: 2, high: 3, urgent: 4 } as Record<string, number>;
+        const tasks = (selected?.tasks ?? []).filter((task) => {
+            const matchesSearch = task.title.toLowerCase().includes(query.toLowerCase());
+            const matchesStatus = filters.status === 'all' || task.status === filters.status;
+            const matchesPriority = filters.priority === 'all' || task.priority === filters.priority;
+            const matchesAssignee = filters.assignee === 'all' || (filters.assignee === 'unassigned' ? !task.assignee : task.assignee?.id === Number(filters.assignee));
+            const today = new Date().toISOString().slice(0, 10);
+            const matchesDue = filters.due === 'all'
+                || (filters.due === 'overdue' && Boolean(task.due_date && task.due_date < today && task.status !== 'complete'))
+                || (filters.due === 'today' && task.due_date === today)
+                || (filters.due === 'none' && !task.due_date);
+
+            return matchesSearch && matchesStatus && matchesPriority && matchesAssignee && matchesDue && (listOptions.showCompleted || task.status !== 'complete');
+        });
+
+        if (sortBy === 'position') {
+            return tasks;
+        }
+
+        return [...tasks].sort((left, right) => {
+            const leftValue = sortBy === 'priority' ? priorityOrder[left.priority] : sortBy === 'assignee' ? left.assignee?.name ?? '' : sortBy === 'due_date' ? left.due_date ?? '9999-12-31' : left.title.toLowerCase();
+            const rightValue = sortBy === 'priority' ? priorityOrder[right.priority] : sortBy === 'assignee' ? right.assignee?.name ?? '' : sortBy === 'due_date' ? right.due_date ?? '9999-12-31' : right.title.toLowerCase();
+            const comparison = leftValue < rightValue ? -1 : leftValue > rightValue ? 1 : 0;
+
+            return sortDirection === 'asc' ? comparison : -comparison;
+        });
+    }, [selected?.tasks, query, filters, sortBy, sortDirection, listOptions.showCompleted]);
+
+    const activeFilterCount = Object.values(filters).filter((value) => value !== 'all').length;
 
     return <main className="min-h-[calc(100vh-4.25rem)] bg-white text-[#1e1f21] dark:bg-[#1e1f21] dark:text-[#f5f4f3]">
         <div className="grid min-h-[calc(100vh-4.25rem)] lg:grid-cols-[270px_minmax(0,1fr)]">
@@ -167,7 +209,7 @@ export function AsanaPlanningView({ workspace, initialProjectId = null, initialT
                     <header className="border-b border-[#edeae9] dark:border-[#3d3e40]">
                         <div className="flex flex-wrap items-center justify-between gap-4 px-6 pt-5">
                             <div className="flex items-center gap-3"><span className="grid size-9 place-items-center rounded-lg bg-[#a66dd4] font-bold text-white">{selected.name.slice(0, 1).toUpperCase()}</span><h1 className="text-xl font-semibold">{selected.name}</h1><Star size={17} className="text-[#6d6e6f]" /><button className="flex items-center gap-1 text-xs text-[#6d6e6f]"><Circle size={12} />Set status</button></div>
-                            <div className="flex items-center gap-2"><div className="flex -space-x-2"><span className="grid size-7 place-items-center rounded-full border-2 border-white bg-[#4573d2] text-[10px] font-bold text-white dark:border-[#1e1f21]">KR</span><span className="grid size-7 place-items-center rounded-full border-2 border-white bg-[#00a88b] text-[10px] font-bold text-white dark:border-[#1e1f21]">WF</span></div><Button size="sm" onClick={shareProject}>Share</Button><Button size="sm" variant="outline"><SlidersHorizontal size={14} />Customize</Button></div>
+                            <div className="flex items-center gap-2"><div className="flex -space-x-2"><span className="grid size-7 place-items-center rounded-full border-2 border-white bg-[#4573d2] text-[10px] font-bold text-white dark:border-[#1e1f21]">KR</span><span className="grid size-7 place-items-center rounded-full border-2 border-white bg-[#00a88b] text-[10px] font-bold text-white dark:border-[#1e1f21]">WF</span></div><Button size="sm" onClick={shareProject}>Share</Button><Button size="sm" variant="outline" onClick={() => setOpenMenu(openMenu === 'options' ? null : 'options')}><SlidersHorizontal size={14} />Customize</Button></div>
                         </div>
                         <nav className="mt-3 flex gap-1 overflow-x-auto px-5">{views.map((item) => <button key={item.id} onClick={() => setView(item.id)} className={`border-b-2 px-3 py-3 text-sm font-semibold ${view === item.id ? 'border-[#4573d2] text-[#4573d2]' : 'border-transparent text-[#6d6e6f] hover:text-[#1e1f21] dark:hover:text-white'}`}>{item.label}</button>)}</nav>
                     </header>
@@ -175,11 +217,36 @@ export function AsanaPlanningView({ workspace, initialProjectId = null, initialT
                     {notice && <div className="mx-6 mt-4 flex items-center gap-2 rounded-lg bg-[#e8f7f2] px-3 py-2 text-sm text-[#147d64] dark:bg-[#163c33] dark:text-[#6ee7c5]"><Check size={15} />{notice}</div>}
                     <div className="flex flex-wrap items-center justify-between gap-3 border-b border-[#edeae9] px-6 py-3 dark:border-[#3d3e40]">
                         <InlineAddTask onCreate={(title) => createTask(title)} compact />
-                        <div className="flex items-center gap-1 text-sm text-[#6d6e6f]"><ToolbarButton icon={<Filter size={15} />} label="Filter" /><ToolbarButton icon={<ChevronDown size={15} />} label="Sort" /><ToolbarButton icon={<LayoutDashboard size={15} />} label="Group" /><ToolbarButton icon={<SlidersHorizontal size={15} />} label="Options" /><div className="relative ml-2"><Search className="absolute left-2.5 top-1/2 -translate-y-1/2" size={14} /><input value={query} onChange={(event) => setQuery(event.target.value)} className="h-8 w-36 rounded-lg border border-[#cfcbca] bg-transparent pl-8 pr-2 text-xs outline-none focus:border-[#4573d2]" placeholder="Search" /></div></div>
+                        <div className="flex flex-wrap items-center gap-1 text-sm text-[#6d6e6f]">
+                            <ToolbarMenu open={openMenu === 'filter'} button={<ToolbarButton active={activeFilterCount > 0} icon={<Filter size={15} />} label={`Filter${activeFilterCount ? ` (${activeFilterCount})` : ''}`} onClick={() => setOpenMenu(openMenu === 'filter' ? null : 'filter')} />}>
+                                <MenuSelect label="Status" value={filters.status} onChange={(value) => setFilters({ ...filters, status: value })} options={[['all', 'All statuses'], ['not_started', 'Not started'], ['in_progress', 'In progress'], ['blocked', 'Blocked'], ['complete', 'Completed']]} />
+                                <MenuSelect label="Priority" value={filters.priority} onChange={(value) => setFilters({ ...filters, priority: value })} options={[['all', 'All priorities'], ['low', 'Low'], ['medium', 'Medium'], ['high', 'High'], ['urgent', 'Urgent']]} />
+                                <MenuSelect label="Assignee" value={filters.assignee} onChange={(value) => setFilters({ ...filters, assignee: value })} options={[['all', 'Anyone'], ['unassigned', 'Unassigned'], ...members.map((member) => [String(member.id), member.name] as [string, string])]} />
+                                <MenuSelect label="Due date" value={filters.due} onChange={(value) => setFilters({ ...filters, due: value })} options={[['all', 'Any date'], ['overdue', 'Overdue'], ['today', 'Due today'], ['none', 'No due date']]} />
+                                <button className="text-left text-xs font-semibold text-[#4573d2]" onClick={() => setFilters({ status: 'all', priority: 'all', assignee: 'all', due: 'all' })}>Clear filters</button>
+                            </ToolbarMenu>
+                            <ToolbarMenu open={openMenu === 'sort'} button={<ToolbarButton active={sortBy !== 'position'} icon={<ChevronDown size={15} />} label="Sort" onClick={() => setOpenMenu(openMenu === 'sort' ? null : 'sort')} />}>
+                                <MenuSelect label="Sort by" value={sortBy} onChange={(value) => setSortBy(value as SortBy)} options={[['position', 'Default order'], ['title', 'Task name'], ['due_date', 'Due date'], ['priority', 'Priority'], ['assignee', 'Assignee']]} />
+                                <MenuSelect label="Direction" value={sortDirection} onChange={(value) => setSortDirection(value as 'asc' | 'desc')} options={[['asc', 'Ascending'], ['desc', 'Descending']]} />
+                            </ToolbarMenu>
+                            <ToolbarMenu open={openMenu === 'group'} button={<ToolbarButton active={groupBy !== 'section'} icon={<LayoutDashboard size={15} />} label="Group" onClick={() => setOpenMenu(openMenu === 'group' ? null : 'group')} />}>
+                                <MenuSelect label="Group tasks by" value={groupBy} onChange={(value) => setGroupBy(value as GroupBy)} options={[['section', 'Project section'], ['status', 'Status'], ['priority', 'Priority'], ['assignee', 'Assignee']]} />
+                            </ToolbarMenu>
+                            <ToolbarMenu open={openMenu === 'options'} button={<ToolbarButton active={!listOptions.showCompleted || listOptions.compact} icon={<SlidersHorizontal size={15} />} label="Options" onClick={() => setOpenMenu(openMenu === 'options' ? null : 'options')} />}>
+                                <MenuToggle label="Show completed tasks" checked={listOptions.showCompleted} onChange={(checked) => setListOptions({ ...listOptions, showCompleted: checked })} />
+                                <MenuToggle label="Compact rows" checked={listOptions.compact} onChange={(checked) => setListOptions({ ...listOptions, compact: checked })} />
+                                <p className="pt-1 text-[11px] font-bold uppercase tracking-wide text-[#8b8c8d]">Visible fields</p>
+                                <MenuToggle label="Assignee" checked={listOptions.assignee} onChange={(checked) => setListOptions({ ...listOptions, assignee: checked })} />
+                                <MenuToggle label="Due date" checked={listOptions.dueDate} onChange={(checked) => setListOptions({ ...listOptions, dueDate: checked })} />
+                                <MenuToggle label="Priority" checked={listOptions.priority} onChange={(checked) => setListOptions({ ...listOptions, priority: checked })} />
+                                <MenuToggle label="Task progress" checked={listOptions.status} onChange={(checked) => setListOptions({ ...listOptions, status: checked })} />
+                            </ToolbarMenu>
+                            <div className="relative ml-2"><Search className="absolute left-2.5 top-1/2 -translate-y-1/2" size={14} /><input value={query} onChange={(event) => setQuery(event.target.value)} className="h-8 w-36 rounded-lg border border-[#cfcbca] bg-transparent pl-8 pr-2 text-xs outline-none focus:border-[#4573d2]" placeholder="Search" /></div>
+                        </div>
                     </div>
 
                     <div className="overflow-x-auto">
-                        {view === 'list' && <TaskList tasks={filteredTasks} onOpen={openTask} onCreate={createTask} onUpdate={updateTask} />}
+                        {view === 'list' && <TaskList tasks={filteredTasks} members={members} groupBy={groupBy} options={listOptions} onOpen={openTask} onCreate={createTask} onUpdate={updateTask} />}
                         {view === 'board' && <TaskBoard tasks={filteredTasks} onOpen={openTask} />}
                         {view === 'timeline' && <TaskTimeline tasks={filteredTasks} onOpen={openTask} />}
                         {view === 'calendar' && <TaskCalendar tasks={filteredTasks} onOpen={openTask} />}
@@ -192,30 +259,29 @@ export function AsanaPlanningView({ workspace, initialProjectId = null, initialT
     </main>;
 }
 
-function TaskList({ tasks, onOpen, onCreate, onUpdate }: { tasks: Task[]; onOpen: (id: number) => void; onCreate: (title: string, isMilestone?: boolean) => Promise<void>; onUpdate: (task: Task, fields: Record<string, unknown>) => Promise<void> }) {
-    const sections = [
-        { title: 'Planning', tasks: tasks.filter((task) => !task.is_milestone && task.status !== 'complete'), milestone: false },
-        { title: 'Milestones', tasks: tasks.filter((task) => task.is_milestone && task.status !== 'complete'), milestone: true },
-        { title: 'Completed', tasks: tasks.filter((task) => task.status === 'complete'), milestone: false },
-    ];
+function TaskList({ tasks, members, groupBy, options, onOpen, onCreate, onUpdate }: { tasks: Task[]; members: Member[]; groupBy: GroupBy; options: ListOptions; onOpen: (id: number) => void; onCreate: (title: string, isMilestone?: boolean) => Promise<void>; onUpdate: (task: Task, fields: Record<string, unknown>) => Promise<void> }) {
+    const groups = taskGroups(tasks, groupBy);
+    const columns = ['minmax(320px,1fr)', options.assignee && '170px', options.dueDate && '130px', options.priority && '120px', options.status && '140px'].filter(Boolean).join(' ');
 
-    return <div className="min-w-[850px] px-6 pb-12">
-        <div className="grid grid-cols-[minmax(320px,1fr)_150px_130px_120px_140px] border-b border-[#edeae9] text-xs text-[#6d6e6f] dark:border-[#3d3e40]"><span className="px-2 py-3">Name</span><span className="border-l border-[#edeae9] px-3 py-3 dark:border-[#3d3e40]">Assignee</span><span className="border-l border-[#edeae9] px-3 py-3 dark:border-[#3d3e40]">Due date</span><span className="border-l border-[#edeae9] px-3 py-3 dark:border-[#3d3e40]">Priority</span><span className="border-l border-[#edeae9] px-3 py-3 dark:border-[#3d3e40]">Task progress</span></div>
-        {sections.map((section) => <section key={section.title} className="pt-4"><h2 className="flex items-center gap-2 px-2 py-2 font-semibold"><ChevronDown size={16} />{section.title}</h2>
-            {section.tasks.map((task) => <TaskRow key={task.id} task={task} onOpen={onOpen} onUpdate={onUpdate} />)}
-            <InlineAddTask onCreate={(title) => onCreate(title, section.milestone)} />
+    return <div className="min-w-[760px] px-6 pb-12">
+        <div className="grid border-b border-[#edeae9] text-xs text-[#6d6e6f] dark:border-[#3d3e40]" style={{ gridTemplateColumns: columns }}><span className="px-2 py-3">Name</span>{options.assignee && <span className="border-l border-[#edeae9] px-3 py-3 dark:border-[#3d3e40]">Assignee</span>}{options.dueDate && <span className="border-l border-[#edeae9] px-3 py-3 dark:border-[#3d3e40]">Due date</span>}{options.priority && <span className="border-l border-[#edeae9] px-3 py-3 dark:border-[#3d3e40]">Priority</span>}{options.status && <span className="border-l border-[#edeae9] px-3 py-3 dark:border-[#3d3e40]">Task progress</span>}</div>
+        {groups.map((group) => <section key={group.title} className="pt-4"><h2 className="flex items-center gap-2 px-2 py-2 font-semibold"><ChevronDown size={16} />{group.title}<span className="text-xs font-normal text-[#8b8c8d]">{group.tasks.length}</span></h2>
+            {group.tasks.map((task) => <TaskRow key={task.id} task={task} members={members} options={options} columns={columns} onOpen={onOpen} onUpdate={onUpdate} />)}
+            {groupBy === 'section' && <InlineAddTask onCreate={(title) => onCreate(title, group.milestone)} />}
         </section>)}
-        <button className="mt-4 flex items-center gap-2 px-2 py-2 text-sm font-semibold text-[#6d6e6f]"><Plus size={17} />Add section</button>
+        {groups.length === 0 && <div className="grid min-h-44 place-items-center text-sm text-[#8b8c8d]">No tasks match these filters.</div>}
+        {groupBy !== 'section' && <InlineAddTask onCreate={onCreate} />}
+        {groupBy === 'section' && <button className="mt-4 flex items-center gap-2 px-2 py-2 text-sm font-semibold text-[#6d6e6f]"><Plus size={17} />Add section</button>}
     </div>;
 }
 
-function TaskRow({ task, onOpen, onUpdate }: { task: Task; onOpen: (id: number) => void; onUpdate: (task: Task, fields: Record<string, unknown>) => Promise<void> }) {
-    return <div className="group grid grid-cols-[minmax(320px,1fr)_150px_130px_120px_140px] border-b border-[#edeae9] text-sm hover:bg-[#f9f8f8] dark:border-[#3d3e40] dark:hover:bg-[#28282a]">
-        <button onClick={() => onOpen(task.id)} className="flex min-w-0 items-center gap-3 px-7 py-2 text-left"><span className={`grid size-4 shrink-0 place-items-center rounded-full border ${task.status === 'complete' ? 'border-[#00a88b] bg-[#00a88b] text-white' : 'border-[#8b8c8d]'}`}>{task.status === 'complete' && <Check size={11} />}</span><span className="truncate">{task.title}</span></button>
-        <div className="flex items-center border-l border-[#edeae9] px-3 dark:border-[#3d3e40]"><span className="grid size-7 place-items-center rounded-full border border-dashed border-[#8b8c8d] text-[#8b8c8d]"><Users size={13} /></span></div>
-        <div className="flex items-center border-l border-[#edeae9] px-2 dark:border-[#3d3e40]"><input aria-label={`Due date for ${task.title}`} type="date" value={task.due_date ?? ''} onChange={(event) => onUpdate(task, { due_date: event.target.value || null })} className="w-full bg-transparent text-xs text-[#6d6e6f] outline-none" /></div>
-        <div className="flex items-center border-l border-[#edeae9] px-2 dark:border-[#3d3e40]"><select aria-label={`Priority for ${task.title}`} value={task.priority} onChange={(event) => onUpdate(task, { priority: event.target.value })} className={`w-full rounded px-2 py-1 text-xs font-semibold outline-none ${priorityClass(task.priority)}`}><option value="low">Low</option><option value="medium">Medium</option><option value="high">High</option><option value="urgent">Urgent</option></select></div>
-        <div className="flex items-center border-l border-[#edeae9] px-2 dark:border-[#3d3e40]"><select aria-label={`Status for ${task.title}`} value={task.status} onChange={(event) => onUpdate(task, { status: event.target.value })} className={`w-full rounded px-2 py-1 text-xs font-semibold outline-none ${statusClass(task.status)}`}><option value="not_started">Not started</option><option value="in_progress">In progress</option><option value="blocked">Blocked</option><option value="complete">Done</option></select></div>
+function TaskRow({ task, members, options, columns, onOpen, onUpdate }: { task: Task; members: Member[]; options: ListOptions; columns: string; onOpen: (id: number) => void; onUpdate: (task: Task, fields: Record<string, unknown>) => Promise<void> }) {
+    return <div className="group grid border-b border-[#edeae9] text-sm hover:bg-[#f9f8f8] dark:border-[#3d3e40] dark:hover:bg-[#28282a]" style={{ gridTemplateColumns: columns }}>
+        <div className={`flex min-w-0 items-center gap-3 px-7 ${options.compact ? 'py-1' : 'py-2'}`}><button aria-label={`${task.status === 'complete' ? 'Reopen' : 'Complete'} ${task.title}`} onClick={() => onUpdate(task, { status: task.status === 'complete' ? 'not_started' : 'complete' })} className={`grid size-4 shrink-0 place-items-center rounded-full border ${task.status === 'complete' ? 'border-[#00a88b] bg-[#00a88b] text-white' : 'border-[#8b8c8d] hover:border-[#00a88b] hover:text-[#00a88b]'}`}>{task.status === 'complete' && <Check size={11} />}</button><button onClick={() => onOpen(task.id)} className="min-w-0 truncate text-left">{task.title}</button></div>
+        {options.assignee && <div className="flex items-center border-l border-[#edeae9] px-2 dark:border-[#3d3e40]"><select aria-label={`Assignee for ${task.title}`} value={task.assignee?.id ?? ''} onChange={(event) => onUpdate(task, { assignee_id: event.target.value ? Number(event.target.value) : null })} className="w-full bg-transparent py-1 text-xs outline-none"><option value="">Unassigned</option>{members.map((member) => <option key={member.id} value={member.id}>{member.name}</option>)}</select></div>}
+        {options.dueDate && <div className="flex items-center border-l border-[#edeae9] px-2 dark:border-[#3d3e40]"><input aria-label={`Due date for ${task.title}`} type="date" value={task.due_date ?? ''} onChange={(event) => onUpdate(task, { due_date: event.target.value || null })} className="w-full bg-transparent text-xs text-[#6d6e6f] outline-none" /></div>}
+        {options.priority && <div className="flex items-center border-l border-[#edeae9] px-2 dark:border-[#3d3e40]"><select aria-label={`Priority for ${task.title}`} value={task.priority} onChange={(event) => onUpdate(task, { priority: event.target.value })} className={`w-full rounded px-2 py-1 text-xs font-semibold outline-none ${priorityClass(task.priority)}`}><option value="low">Low</option><option value="medium">Medium</option><option value="high">High</option><option value="urgent">Urgent</option></select></div>}
+        {options.status && <div className="flex items-center border-l border-[#edeae9] px-2 dark:border-[#3d3e40]"><select aria-label={`Status for ${task.title}`} value={task.status} onChange={(event) => onUpdate(task, { status: event.target.value })} className={`w-full rounded px-2 py-1 text-xs font-semibold outline-none ${statusClass(task.status)}`}><option value="not_started">Not started</option><option value="in_progress">In progress</option><option value="blocked">Blocked</option><option value="complete">Done</option></select></div>}
     </div>;
 }
 
@@ -258,8 +324,43 @@ function Stat({ label, value }: { label: string; value: number }) {
     return <div className="rounded-xl border border-[#edeae9] p-5 dark:border-[#3d3e40]"><span className="text-sm text-[#6d6e6f]">{label}</span><strong className="mt-2 block text-3xl">{value}</strong></div>;
 }
 
-function ToolbarButton({ icon, label }: { icon: ReactNode; label: string }) {
-    return <button className="flex items-center gap-1 rounded-md px-2 py-1.5 hover:bg-[#f1f0ef] dark:hover:bg-[#292a2c]">{icon}{label}</button>;
+function taskGroups(tasks: Task[], groupBy: GroupBy): { title: string; tasks: Task[]; milestone: boolean }[] {
+    if (groupBy === 'section') {
+        return [
+            { title: 'Planning', tasks: tasks.filter((task) => !task.is_milestone && task.status !== 'complete'), milestone: false },
+            { title: 'Milestones', tasks: tasks.filter((task) => task.is_milestone && task.status !== 'complete'), milestone: true },
+            { title: 'Completed', tasks: tasks.filter((task) => task.status === 'complete'), milestone: false },
+        ];
+    }
+
+    const labels: Record<string, string> = {
+        not_started: 'Not started', in_progress: 'In progress', blocked: 'Blocked', complete: 'Completed',
+        low: 'Low priority', medium: 'Medium priority', high: 'High priority', urgent: 'Urgent',
+    };
+    const grouped = new Map<string, Task[]>();
+
+    tasks.forEach((task) => {
+        const key = groupBy === 'assignee' ? task.assignee?.name ?? 'Unassigned' : task[groupBy];
+        grouped.set(key, [...(grouped.get(key) ?? []), task]);
+    });
+
+    return [...grouped.entries()].map(([key, groupedTasks]) => ({ title: labels[key] ?? key, tasks: groupedTasks, milestone: false }));
+}
+
+function ToolbarMenu({ open, button, children }: { open: boolean; button: ReactNode; children: ReactNode }) {
+    return <div className="relative">{button}{open && <div className="absolute right-0 top-full z-30 mt-1 grid min-w-56 gap-3 rounded-xl border border-[#cfcbca] bg-white p-3 text-[#1e1f21] shadow-xl dark:border-[#4b4c4f] dark:bg-[#292a2c] dark:text-[#f5f4f3]">{children}</div>}</div>;
+}
+
+function ToolbarButton({ icon, label, active = false, onClick }: { icon: ReactNode; label: string; active?: boolean; onClick: () => void }) {
+    return <button onClick={onClick} className={`flex items-center gap-1 rounded-md px-2 py-1.5 ${active ? 'bg-[#e9f2ff] font-semibold text-[#2f6fce] dark:bg-[#263a55]' : 'hover:bg-[#f1f0ef] dark:hover:bg-[#292a2c]'}`}>{icon}{label}</button>;
+}
+
+function MenuSelect({ label, value, options, onChange }: { label: string; value: string; options: [string, string][]; onChange: (value: string) => void }) {
+    return <label className="grid gap-1 text-xs font-semibold"><span>{label}</span><select value={value} onChange={(event) => onChange(event.target.value)} className="h-9 rounded-lg border border-[#cfcbca] bg-white px-2 text-sm font-normal outline-none focus:border-[#4573d2] dark:border-[#4b4c4f] dark:bg-[#1e1f21]">{options.map(([optionValue, optionLabel]) => <option key={optionValue} value={optionValue}>{optionLabel}</option>)}</select></label>;
+}
+
+function MenuToggle({ label, checked, onChange }: { label: string; checked: boolean; onChange: (checked: boolean) => void }) {
+    return <label className="flex items-center justify-between gap-4 text-sm"><span>{label}</span><input type="checkbox" checked={checked} onChange={(event) => onChange(event.target.checked)} className="size-4 accent-[#4573d2]" /></label>;
 }
 
 function priorityClass(priority: string): string {
