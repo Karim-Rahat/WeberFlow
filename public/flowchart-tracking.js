@@ -1,9 +1,9 @@
 (() => {
   const completedCapabilities = new Set([
     'Authentication',
-    'Workspace',
-    'REST API',
-    'Core Database',
+    'Workspaces',
+    'Laravel REST API',
+    'MySQL data layer',
     'Projects',
     'Tasks & subtasks',
     'Flexible views',
@@ -11,8 +11,11 @@
     'Files & activity',
     'Inbox',
     'Mail & real-time',
+    'Timeline & dependency',
+    'Custom workflows',
+    'Workload',
   ]);
-  const completionDate = 'October 10, 2026';
+  const completionDate = 'October 11, 2026';
 
   function addSummary() {
     if (document.querySelector('.completion-summary')) return;
@@ -23,8 +26,8 @@
     const summary = document.createElement('div');
     summary.className = 'completion-summary';
     summary.innerHTML = `
-      <strong>✓ Releases 0 and 1 complete</strong>
-      <span>11 roadmap capabilities + platform admin delivered · ${completionDate}</span>
+      <strong>✓ Releases 0, 1, and 2 complete</strong>
+      <span>14 roadmap capabilities + platform admin delivered · ${completionDate}</span>
     `;
     target.insertAdjacentElement('afterend', summary);
   }
@@ -45,7 +48,7 @@
   function markRelease() {
     document.querySelectorAll('.release').forEach((card) => {
       const label = card.querySelector('span')?.textContent?.trim();
-      if (!['Release 0', 'Release 1'].includes(label) || card.classList.contains('completed')) return;
+      if (!['Release 0', 'Release 1', 'Release 2'].includes(label) || card.classList.contains('completed')) return;
 
       card.classList.add('completed');
       const labelElement = card.querySelector('span');
@@ -64,28 +67,10 @@
     });
   }
 
-  function markReleaseInProgress() {
-    document.querySelectorAll('.release').forEach((card) => {
-      const label = card.querySelector('span')?.textContent?.trim();
-      if (label !== 'Release 2' || card.classList.contains('in-progress')) return;
-
-      card.classList.add('in-progress');
-      const labelElement = card.querySelector('span');
-      if (labelElement) {
-        const row = document.createElement('div');
-        row.className = 'release-completion';
-        labelElement.before(row);
-        row.append(labelElement);
-        row.insertAdjacentHTML('beforeend', '<span class="progress-badge">In progress</span>');
-      }
-    });
-  }
-
   function updateTracking() {
     addSummary();
     markCapabilities();
     markRelease();
-    markReleaseInProgress();
   }
 
   updateTracking();

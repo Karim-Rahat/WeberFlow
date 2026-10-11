@@ -44,7 +44,9 @@ class ProjectController extends Controller
         Gate::authorize('view', $project);
 
         return new ProjectResource($project->load([
-            'tasks' => fn ($query) => $query->with(['assignee', 'predecessors.assignee']),
+            'tasks' => fn ($query) => $query->with(['assignee', 'predecessors.assignee', 'customFields']),
+            'customFields',
+            'forms',
         ])->loadCount('tasks'));
     }
 

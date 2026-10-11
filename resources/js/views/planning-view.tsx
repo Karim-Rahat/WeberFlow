@@ -1,5 +1,5 @@
 import { useEffect, useState, type FormEvent, type ReactNode } from 'react';
-import { CalendarDays, CalendarRange, ChartNoAxesGantt, Columns3, Diamond, LayoutList, LoaderCircle, Plus, Users } from 'lucide-react';
+import { CalendarDays, CalendarRange, ChartNoAxesGantt, Columns3, Copy, Diamond, LayoutList, ListPlus, LoaderCircle, Plus, SlidersHorizontal, Users } from 'lucide-react';
 import { Button } from '../components/ui/button';
 import { Card } from '../components/ui/card';
 import { Input } from '../components/ui/input';
@@ -7,8 +7,11 @@ import { Label } from '../components/ui/label';
 import { TaskDetail } from './task-detail';
 
 export type Workspace = { id: number; name: string };
-export type Task = { id: number; title: string; description?: string | null; status: string; priority: string; start_date: string | null; due_date: string | null; is_milestone: boolean; predecessors: Task[]; blocked_by_dependency?: boolean };
-type Project = { id: number; name: string; description: string | null; status: string; start_date: string | null; due_date: string | null; tasks_count: number; tasks?: Task[] };
+export type Task = { id: number; title: string; description?: string | null; status: string; priority: string; start_date: string | null; due_date: string | null; is_milestone: boolean; recurrence?: string | null; recurrence_interval?: number; predecessors: Task[]; blocked_by_dependency?: boolean };
+type CustomField = { id: number; name: string; type: string; is_required: boolean };
+type ProjectForm = { id: number; name: string; fields: { label: string; type: string; required: boolean }[] };
+type Project = { id: number; name: string; description: string | null; status: string; start_date: string | null; due_date: string | null; tasks_count: number; tasks?: Task[]; custom_fields?: CustomField[]; forms?: ProjectForm[] };
+type ProjectTemplate = { id: number; name: string; description: string | null };
 type ApiError = { message?: string; errors?: Record<string, string[]> };
 type Workload = { assignee: { id: number; name: string } | null; total: number; completed: number; blocked: number };
 
@@ -32,11 +35,12 @@ export function PlanningView({ workspace }: { workspace: Workspace }) {
     const [view, setView] = useState<'list' | 'board' | 'calendar' | 'timeline'>('list');
     const [workload, setWorkload] = useState<Workload[]>([]);
     const [selectedTaskId, setSelectedTaskId] = useState<number | null>(null);
+    const [templates, setTemplates] = useState<ProjectTemplate[]>([]);
 
     useEffect(() => {
         setLoading(true);
-        request<{ data: Project[] }>(`/api/v1/workspaces/${workspace.id}/projects`)
-            .then(({ data }) => setProjects(data))
+        Promise.all([request<{ data: Project[] }>(`/api/v1/workspaces/${workspace.id}/projects`), request<{ data: ProjectTemplate[] }>(`/api/v1/workspaces/${workspace.id}/templates`)])
+            .then(([projectResponse, templateResponse]) => { setProjects(projectResponse.data); setTemplates(templateResponse.data); })
             .finally(() => setLoading(false));
     }, [workspace.id]);
 
@@ -76,7 +80,7 @@ export function PlanningView({ workspace }: { workspace: Workspace }) {
         try {
             await fetch('/sanctum/csrf-cookie', { credentials: 'include' });
             const payload = Object.fromEntries(new FormData(form).entries());
-            const response = await request<{ data: Task }>(`/api/v1/projects/${selected.id}/tasks`, { method: 'POST', body: JSON.stringify({ ...payload, is_milestone: payload.is_milestone === 'on' }) });
+            const response = await request<{ data: Task }>(`/api/v1/projects/${selected.id}/tasks`, { method: 'POST', body: JSON.stringify({ ...payload, is_milestone: payload.is_milestone === 'on', recurrence: payload.recurrence || null }) });
             setSelected({ ...selected, tasks: [...(selected.tasks ?? []), response.data], tasks_count: selected.tasks_count + 1 });
             setProjects(projects.map((project) => project.id === selected.id ? { ...project, tasks_count: project.tasks_count + 1 } : project));
             setNotice(response.data.is_milestone ? 'Milestone added.' : 'Scheduled task added.');
@@ -84,6 +88,42 @@ export function PlanningView({ workspace }: { workspace: Workspace }) {
         } catch (error) {
             setErrors((error as ApiError).errors ?? { form: [(error as ApiError).message ?? 'Unable to create task.'] });
         }
+    }
+
+    async function createCustomField(event: FormEvent<HTMLFormElement>) {
+        event.preventDefault();
+        if (!selected) return;
+        const form = event.currentTarget;
+        const payload = Object.fromEntries(new FormData(form).entries());
+        await request(`/api/v1/projects/${selected.id}/custom-fields`, { method: 'POST', body: JSON.stringify({ ...payload, is_required: payload.is_required === 'on' }) });
+        form.reset();
+        await refreshProject();
+        setNotice('Custom field added to the project.');
+    }
+
+    async function createForm(event: FormEvent<HTMLFormElement>) {
+        event.preventDefault();
+        if (!selected) return;
+        const form = event.currentTarget;
+        const payload = Object.fromEntries(new FormData(form).entries());
+        await request(`/api/v1/projects/${selected.id}/forms`, { method: 'POST', body: JSON.stringify({ name: payload.name, fields: [{ label: payload.field_label, type: 'text', required: true }] }) });
+        form.reset();
+        await refreshProject();
+        setNotice('Intake form published.');
+    }
+
+    async function saveTemplate() {
+        if (!selected) return;
+        const response = await request<{ data: ProjectTemplate }>(`/api/v1/projects/${selected.id}/templates`, { method: 'POST', body: JSON.stringify({ name: `${selected.name} template` }) });
+        setTemplates([response.data, ...templates]);
+        setNotice('Project saved as a reusable template.');
+    }
+
+    async function applyTemplate(template: ProjectTemplate) {
+        const response = await request<{ data: Project }>(`/api/v1/workspaces/${workspace.id}/templates/${template.id}`, { method: 'POST', body: JSON.stringify({ name: `${template.name} copy` }) });
+        setProjects([response.data, ...projects]);
+        setSelected(response.data);
+        setNotice('Template applied to a new project.');
     }
 
     return <main className="mx-auto grid max-w-[1480px] gap-6 p-4 sm:p-6 lg:p-8">
@@ -94,8 +134,9 @@ export function PlanningView({ workspace }: { workspace: Workspace }) {
             <div className="grid content-start gap-4">
                 <Card className="p-5"><h2 className="font-bold">New project</h2><form className="mt-4 grid gap-3" onSubmit={createProject}><Field label="Project name" name="name" error={errors.name?.[0]} /><div className="grid grid-cols-2 gap-3"><Field label="Start" name="start_date" type="date" error={errors.start_date?.[0]} /><Field label="Due" name="due_date" type="date" error={errors.due_date?.[0]} /></div><Button type="submit"><Plus size={16} />Create project</Button></form></Card>
                 <Card className="overflow-hidden"><div className="border-b border-[#dce3dc] p-4 dark:border-[#303a33]"><h2 className="font-bold">Projects</h2></div>{loading ? <LoaderCircle className="m-6 animate-spin text-brand-600" /> : <div className="grid p-2">{projects.map((project) => <button key={project.id} onClick={() => openProject(project)} className={`rounded-xl p-3 text-left hover:bg-[#eef1ea] dark:hover:bg-[#222a25] ${selected?.id === project.id ? 'bg-brand-50 dark:bg-brand-900' : ''}`}><strong className="block text-sm">{project.name}</strong><small className="text-[#68736c] dark:text-[#a8b1ab]">{project.tasks_count} scheduled items</small></button>)}{projects.length === 0 && <p className="p-5 text-sm text-[#68736c]">Create your first project.</p>}</div>}</Card>
+                <Card className="overflow-hidden"><div className="flex items-center gap-2 border-b border-[#dce3dc] p-4 dark:border-[#303a33]"><Copy size={16} /><h2 className="font-bold">Templates</h2></div><div className="grid p-2">{templates.map((template) => <button key={template.id} onClick={() => applyTemplate(template)} className="rounded-xl p-3 text-left text-sm hover:bg-[#eef1ea] dark:hover:bg-[#222a25]"><strong className="block">{template.name}</strong><small className="text-[#68736c]">Create a project copy</small></button>)}{templates.length === 0 && <p className="p-4 text-sm text-[#68736c]">Save a project to reuse its work.</p>}</div></Card>
             </div>
-            {selected ? <div className="grid content-start gap-5"><Card className="p-5"><div className="flex flex-wrap items-start justify-between gap-3"><div><p className="text-xs font-bold uppercase tracking-[.12em] text-brand-600 dark:text-brand-300">{selected.status.replaceAll('_', ' ')}</p><h2 className="mt-1 text-2xl font-semibold">{selected.name}</h2><p className="mt-1 text-xs font-bold text-blue-600 dark:text-blue-300">Release 2 planning · In progress</p></div><div className="text-right text-xs text-[#68736c] dark:text-[#a8b1ab]"><p>{selected.start_date ?? 'No start date'}</p><p>{selected.due_date ?? 'No due date'}</p></div></div></Card><Card className="overflow-hidden"><div className="flex flex-wrap items-center justify-between gap-3 border-b border-[#dce3dc] px-5 py-4 dark:border-[#303a33]"><div className="flex items-center gap-2"><CalendarRange size={18} className="text-brand-600" /><h2 className="font-bold">Project work</h2></div><div className="flex flex-wrap rounded-lg bg-[#eef1ea] p-1 dark:bg-[#222a25]"><ViewButton active={view === 'list'} onClick={() => setView('list')} icon={<LayoutList size={14} />} label="List" /><ViewButton active={view === 'board'} onClick={() => setView('board')} icon={<Columns3 size={14} />} label="Board" /><ViewButton active={view === 'calendar'} onClick={() => setView('calendar')} icon={<CalendarDays size={14} />} label="Calendar" /><ViewButton active={view === 'timeline'} onClick={() => setView('timeline')} icon={<ChartNoAxesGantt size={14} />} label="Timeline" /></div></div><TaskCollection tasks={selected.tasks ?? []} view={view} onOpen={setSelectedTaskId} /></Card><Card className="p-5"><h2 className="flex items-center gap-2 font-bold"><Users size={17} />Workload preview</h2><div className="mt-4 grid gap-3 sm:grid-cols-2">{workload.map((row, index) => <div key={row.assignee?.id ?? `none-${index}`} className="rounded-xl bg-[#f4f6f1] p-3 dark:bg-[#222a25]"><div className="flex justify-between text-sm"><strong>{row.assignee?.name ?? 'Unassigned'}</strong><span>{row.total} tasks</span></div><div className="mt-2 h-2 overflow-hidden rounded-full bg-[#dce3dc] dark:bg-[#303a33]"><div className="h-full bg-brand-500" style={{ width: `${row.total ? (row.completed / row.total) * 100 : 0}%` }} /></div>{row.blocked > 0 && <small className="mt-1 block text-amber-700 dark:text-amber-300">{row.blocked} blocked</small>}</div>)}</div></Card><Card className="p-5"><h2 className="font-bold">Add task</h2><form className="mt-4 grid gap-4" onSubmit={createTask}><Field label="Task or milestone" name="title" error={errors.title?.[0]} /><div className="grid gap-3 sm:grid-cols-2"><Field label="Start" name="start_date" type="date" error={errors.start_date?.[0]} /><Field label="Due" name="due_date" type="date" error={errors.due_date?.[0]} /></div><label className="flex items-center gap-2 text-sm font-semibold"><input className="size-4 accent-[#245b45]" type="checkbox" name="is_milestone" />Mark as milestone</label><Button type="submit"><Plus size={16} />Add task</Button></form></Card></div> : <Card className="grid min-h-96 place-items-center p-8 text-center"><div><CalendarRange className="mx-auto text-brand-500" size={38} /><h2 className="mt-4 text-xl font-bold">Select a project</h2><p className="mt-2 text-sm text-[#68736c] dark:text-[#a8b1ab]">Choose a project to open its work views.</p></div></Card>}
+            {selected ? <div className="grid content-start gap-5"><Card className="p-5"><div className="flex flex-wrap items-start justify-between gap-3"><div><p className="text-xs font-bold uppercase tracking-[.12em] text-brand-600 dark:text-brand-300">{selected.status.replaceAll('_', ' ')}</p><h2 className="mt-1 text-2xl font-semibold">{selected.name}</h2><p className="mt-1 text-xs font-bold text-blue-600 dark:text-blue-300">Release 2 planning · Complete</p></div><div className="grid justify-items-end gap-2 text-right text-xs text-[#68736c] dark:text-[#a8b1ab]"><div><p>{selected.start_date ?? 'No start date'}</p><p>{selected.due_date ?? 'No due date'}</p></div><Button size="sm" variant="outline" onClick={saveTemplate}><Copy size={14} />Save template</Button></div></div></Card><Card className="overflow-hidden"><div className="flex flex-wrap items-center justify-between gap-3 border-b border-[#dce3dc] px-5 py-4 dark:border-[#303a33]"><div className="flex items-center gap-2"><CalendarRange size={18} className="text-brand-600" /><h2 className="font-bold">Project work</h2></div><div className="flex flex-wrap rounded-lg bg-[#eef1ea] p-1 dark:bg-[#222a25]"><ViewButton active={view === 'list'} onClick={() => setView('list')} icon={<LayoutList size={14} />} label="List" /><ViewButton active={view === 'board'} onClick={() => setView('board')} icon={<Columns3 size={14} />} label="Board" /><ViewButton active={view === 'calendar'} onClick={() => setView('calendar')} icon={<CalendarDays size={14} />} label="Calendar" /><ViewButton active={view === 'timeline'} onClick={() => setView('timeline')} icon={<ChartNoAxesGantt size={14} />} label="Timeline" /></div></div><TaskCollection tasks={selected.tasks ?? []} view={view} onOpen={setSelectedTaskId} /></Card><Card className="p-5"><h2 className="flex items-center gap-2 font-bold"><Users size={17} />Workload preview</h2><div className="mt-4 grid gap-3 sm:grid-cols-2">{workload.map((row, index) => <div key={row.assignee?.id ?? `none-${index}`} className="rounded-xl bg-[#f4f6f1] p-3 dark:bg-[#222a25]"><div className="flex justify-between text-sm"><strong>{row.assignee?.name ?? 'Unassigned'}</strong><span>{row.total} tasks</span></div><div className="mt-2 h-2 overflow-hidden rounded-full bg-[#dce3dc] dark:bg-[#303a33]"><div className="h-full bg-brand-500" style={{ width: `${row.total ? (row.completed / row.total) * 100 : 0}%` }} /></div>{row.blocked > 0 && <small className="mt-1 block text-amber-700 dark:text-amber-300">{row.blocked} blocked</small>}</div>)}</div></Card><div className="grid gap-5 lg:grid-cols-2"><Card className="p-5"><h2 className="flex items-center gap-2 font-bold"><SlidersHorizontal size={17} />Custom fields</h2><div className="mt-3 flex flex-wrap gap-2">{selected.custom_fields?.map((field) => <span key={field.id} className="rounded-full bg-brand-50 px-2.5 py-1 text-xs font-semibold text-brand-700 dark:bg-brand-900 dark:text-brand-300">{field.name} · {field.type}</span>)}</div><form className="mt-4 grid gap-3 sm:grid-cols-[1fr_120px_auto]" onSubmit={createCustomField}><Input name="name" required placeholder="Field name" /><select name="type" className="h-11 rounded-xl border border-[#dce3dc] bg-white px-3 dark:border-[#303a33] dark:bg-[#181d1a]"><option value="text">Text</option><option value="number">Number</option><option value="date">Date</option><option value="select">Select</option></select><Button type="submit"><Plus size={15} />Add</Button></form></Card><Card className="p-5"><h2 className="flex items-center gap-2 font-bold"><ListPlus size={17} />Intake forms</h2><div className="mt-3 grid gap-2">{selected.forms?.map((form) => <span key={form.id} className="text-sm font-semibold">{form.name} · {form.fields.length} fields</span>)}</div><form className="mt-4 grid gap-3" onSubmit={createForm}><Input name="name" required placeholder="Form name" /><Input name="field_label" required placeholder="First question" /><Button type="submit"><Plus size={15} />Publish form</Button></form></Card></div><Card className="p-5"><h2 className="font-bold">Add task</h2><form className="mt-4 grid gap-4" onSubmit={createTask}><Field label="Task or milestone" name="title" error={errors.title?.[0]} /><div className="grid gap-3 sm:grid-cols-2"><Field label="Start" name="start_date" type="date" error={errors.start_date?.[0]} /><Field label="Due" name="due_date" type="date" error={errors.due_date?.[0]} /></div><div className="grid gap-2"><Label htmlFor="recurrence">Repeat</Label><select id="recurrence" name="recurrence" className="h-11 rounded-xl border border-[#dce3dc] bg-white px-3 dark:border-[#303a33] dark:bg-[#181d1a]"><option value="">Does not repeat</option><option value="daily">Daily</option><option value="weekly">Weekly</option><option value="monthly">Monthly</option></select></div><label className="flex items-center gap-2 text-sm font-semibold"><input className="size-4 accent-[#245b45]" type="checkbox" name="is_milestone" />Mark as milestone</label><Button type="submit"><Plus size={16} />Add task</Button></form></Card></div> : <Card className="grid min-h-96 place-items-center p-8 text-center"><div><CalendarRange className="mx-auto text-brand-500" size={38} /><h2 className="mt-4 text-xl font-bold">Select a project</h2><p className="mt-2 text-sm text-[#68736c] dark:text-[#a8b1ab]">Choose a project to open its work views.</p></div></Card>}
         </section>
         {selectedTaskId && selected && <TaskDetail taskId={selectedTaskId} projectId={selected.id} workspace={workspace} onClose={() => setSelectedTaskId(null)} onChanged={refreshProject} />}
     </main>;

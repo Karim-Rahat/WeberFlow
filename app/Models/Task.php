@@ -10,7 +10,7 @@ use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\BelongsToMany;
 use Illuminate\Database\Eloquent\Relations\HasMany;
 
-#[Fillable(['workspace_id', 'project_id', 'section_id', 'creator_id', 'assignee_id', 'parent_id', 'title', 'description', 'status', 'priority', 'start_date', 'due_date', 'is_milestone', 'completed_at', 'position'])]
+#[Fillable(['workspace_id', 'project_id', 'section_id', 'creator_id', 'assignee_id', 'parent_id', 'recurring_parent_id', 'title', 'description', 'status', 'priority', 'start_date', 'due_date', 'is_milestone', 'recurrence', 'recurrence_interval', 'completed_at', 'position'])]
 class Task extends Model
 {
     /** @use HasFactory<TaskFactory> */
@@ -46,6 +46,16 @@ class Task extends Model
         return $this->hasMany(self::class, 'parent_id');
     }
 
+    public function recurringChildren(): HasMany
+    {
+        return $this->hasMany(self::class, 'recurring_parent_id');
+    }
+
+    public function customFields(): BelongsToMany
+    {
+        return $this->belongsToMany(CustomField::class, 'custom_field_values')->withPivot('value')->withTimestamps();
+    }
+
     public function predecessors(): BelongsToMany
     {
         return $this->belongsToMany(self::class, 'task_dependencies', 'dependent_task_id', 'predecessor_task_id')->withTimestamps();
@@ -73,6 +83,6 @@ class Task extends Model
 
     protected function casts(): array
     {
-        return ['start_date' => 'date', 'due_date' => 'date', 'is_milestone' => 'boolean', 'completed_at' => 'datetime'];
+        return ['start_date' => 'date', 'due_date' => 'date', 'is_milestone' => 'boolean', 'recurrence_interval' => 'integer', 'completed_at' => 'datetime'];
     }
 }

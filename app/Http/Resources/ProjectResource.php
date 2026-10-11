@@ -18,6 +18,8 @@ class ProjectResource extends JsonResource
             'due_date' => $this->due_date?->toDateString(),
             'tasks_count' => $this->whenCounted('tasks'),
             'tasks' => TaskResource::collection($this->whenLoaded('tasks')),
+            'custom_fields' => $this->whenLoaded('customFields'),
+            'forms' => $this->whenLoaded('forms'),
         ];
     }
 }

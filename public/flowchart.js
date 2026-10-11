@@ -50,7 +50,7 @@ const nodes = [
 const releases = [
     { phase: 'foundation', label: 'Release 0', title: 'Foundation', description: 'Architecture, design system, authentication, workspace boundary, CI.', time: 'Week 1' },
     { phase: 'mvp', label: 'Release 1', title: 'Core work', description: 'Projects, tasks, collaboration, notifications, list, board, calendar.', time: 'Weeks 2–4' },
-    { phase: 'planning', label: 'Release 2', title: 'Planning', description: 'Timeline, dependencies, workload, fields, forms, reporting.', time: '6–8 weeks' },
+    { phase: 'planning', label: 'Release 2', title: 'Planning', description: 'Timeline, dependencies, milestones, fields, forms, templates, recurring tasks.', time: '6–8 weeks' },
     { phase: 'advanced', label: 'Release 3', title: 'Scale', description: 'Portfolios, goals, automation, approvals, time tracking.', time: '6–8 weeks' },
     { phase: 'enterprise', label: 'Release 4', title: 'Enterprise', description: 'SSO, SCIM, compliance controls, integrations, public API.', time: '8–12 weeks' }
 ];

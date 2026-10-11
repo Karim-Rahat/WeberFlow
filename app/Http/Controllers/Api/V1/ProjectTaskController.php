@@ -18,11 +18,16 @@ class ProjectTaskController extends Controller
         Gate::authorize('update', $project);
 
         $task = $project->tasks()->create([
-            ...$request->safe()->only(['section_id', 'parent_id', 'assignee_id', 'title', 'description', 'status', 'priority', 'start_date', 'due_date', 'is_milestone']),
+            ...$request->safe()->only(['section_id', 'parent_id', 'assignee_id', 'title', 'description', 'status', 'priority', 'start_date', 'due_date', 'is_milestone', 'recurrence', 'recurrence_interval']),
             'workspace_id' => $project->workspace_id,
             'creator_id' => $request->user()->id,
             'position' => ((int) $project->tasks()->max('position')) + 1,
         ]);
+
+        $customFields = collect($request->validated('custom_fields', []))
+            ->only($project->customFields()->pluck('id')->map(fn (int $id): string => (string) $id)->all())
+            ->map(fn (?string $value): array => ['value' => $value]);
+        $task->customFields()->sync($customFields);
 
         $task->activities()->create(['workspace_id' => $project->workspace_id, 'actor_id' => $request->user()->id, 'event' => 'task.created']);
 
@@ -32,6 +37,6 @@ class ProjectTaskController extends Controller
 
         TaskChanged::dispatch($task, 'created');
 
-        return new TaskResource($task->load(['assignee', 'predecessors']));
+        return new TaskResource($task->load(['assignee', 'predecessors', 'customFields']));
     }
 }

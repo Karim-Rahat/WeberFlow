@@ -35,6 +35,16 @@ class Project extends Model
         return $this->hasMany(Task::class)->orderBy('position');
     }
 
+    public function customFields(): HasMany
+    {
+        return $this->hasMany(CustomField::class)->orderBy('position');
+    }
+
+    public function forms(): HasMany
+    {
+        return $this->hasMany(ProjectForm::class)->latest();
+    }
+
     protected function casts(): array
     {
         return ['start_date' => 'date', 'due_date' => 'date'];

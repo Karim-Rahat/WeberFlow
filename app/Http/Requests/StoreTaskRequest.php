@@ -22,6 +22,10 @@ class StoreTaskRequest extends FormRequest
             'start_date' => ['nullable', 'date'],
             'due_date' => ['nullable', 'date', 'after_or_equal:start_date'],
             'is_milestone' => ['nullable', 'boolean'],
+            'recurrence' => ['nullable', Rule::in(['daily', 'weekly', 'monthly'])],
+            'recurrence_interval' => ['nullable', 'integer', 'min:1', 'max:52'],
+            'custom_fields' => ['nullable', 'array'],
+            'custom_fields.*' => ['nullable', 'string', 'max:10000'],
         ];
     }
 }
