@@ -24,7 +24,7 @@ const views: { id: View; label: string }[] = [
     { id: 'calendar', label: 'Calendar' },
 ];
 
-export function AsanaPlanningView({ workspace }: { workspace: Workspace }) {
+export function AsanaPlanningView({ workspace, initialProjectId = null, initialTaskId = null }: { workspace: Workspace; initialProjectId?: number | null; initialTaskId?: number | null }) {
     const [projects, setProjects] = useState<Project[]>([]);
     const [selected, setSelected] = useState<Project | null>(null);
     const [view, setView] = useState<View>('list');
@@ -36,22 +36,73 @@ export function AsanaPlanningView({ workspace }: { workspace: Workspace }) {
     useEffect(() => {
         request<{ data: Project[] }>(`/api/v1/workspaces/${workspace.id}/projects`).then(({ data }) => {
             setProjects(data);
-            if (data[0]) {
-                openProject(data[0]);
+            const initialProject = data.find((project) => project.id === initialProjectId) ?? data[0];
+            if (initialProject) {
+                void openProject(initialProject, 'replace', initialProject.id === initialProjectId ? initialTaskId : null);
             }
         });
     }, [workspace.id]);
 
-    async function openProject(project: Project) {
+    useEffect(() => {
+        function restoreProjectFromHistory() {
+            const match = window.location.pathname.match(/^\/app\/([^/]+)\/(\d+)\/?$/);
+            const projectId = Number(match?.[2]);
+            const project = projects.find((candidate) => candidate.id === projectId);
+            const taskId = Number(new URLSearchParams(window.location.search).get('task'));
+
+            if (match && decodeURIComponent(match[1]) === workspace.slug && project) {
+                void openProject(project, 'none', Number.isInteger(taskId) && taskId > 0 ? taskId : null);
+            }
+        }
+
+        window.addEventListener('popstate', restoreProjectFromHistory);
+
+        return () => window.removeEventListener('popstate', restoreProjectFromHistory);
+    }, [projects, workspace.slug]);
+
+    function projectUrl(project: Project, taskId: number | null = null) {
+        const url = `/app/${encodeURIComponent(workspace.slug)}/${project.id}`;
+
+        return taskId ? `${url}?task=${taskId}` : url;
+    }
+
+    async function openProject(project: Project, historyMode: 'push' | 'replace' | 'none' = 'push', taskId: number | null = null) {
         const { data } = await request<{ data: Project }>(`/api/v1/projects/${project.id}`);
         setSelected(data);
-        setSelectedTaskId(null);
+        setSelectedTaskId(taskId);
+        if (historyMode !== 'none') {
+            window.history[historyMode === 'push' ? 'pushState' : 'replaceState']({}, '', projectUrl(project, taskId));
+        }
     }
 
     async function refreshProject() {
         if (selected) {
-            await openProject(selected);
+            const { data } = await request<{ data: Project }>(`/api/v1/projects/${selected.id}`);
+            setSelected(data);
         }
+    }
+
+    function openTask(taskId: number) {
+        if (!selected) {
+            return;
+        }
+
+        setSelectedTaskId(taskId);
+        window.history.pushState({}, '', projectUrl(selected, taskId));
+    }
+
+    function closeTask() {
+        if (!selected) {
+            return;
+        }
+
+        setSelectedTaskId(null);
+        window.history.pushState({}, '', projectUrl(selected));
+    }
+
+    async function shareProject() {
+        await navigator.clipboard.writeText(window.location.origin + (selected ? projectUrl(selected) : window.location.pathname));
+        setNotice('Project link copied');
     }
 
     async function createProject(event: FormEvent<HTMLFormElement>) {
@@ -61,7 +112,7 @@ export function AsanaPlanningView({ workspace }: { workspace: Workspace }) {
         await fetch('/sanctum/csrf-cookie', { credentials: 'include' });
         const { data } = await request<{ data: Project }>(`/api/v1/workspaces/${workspace.id}/projects`, { method: 'POST', body: JSON.stringify(payload) });
         setProjects([data, ...projects]);
-        setSelected({ ...data, tasks: [] });
+        await openProject({ ...data, tasks: [] });
         setShowNewProject(false);
         setNotice('Project created');
         form.reset();
@@ -116,7 +167,7 @@ export function AsanaPlanningView({ workspace }: { workspace: Workspace }) {
                     <header className="border-b border-[#edeae9] dark:border-[#3d3e40]">
                         <div className="flex flex-wrap items-center justify-between gap-4 px-6 pt-5">
                             <div className="flex items-center gap-3"><span className="grid size-9 place-items-center rounded-lg bg-[#a66dd4] font-bold text-white">{selected.name.slice(0, 1).toUpperCase()}</span><h1 className="text-xl font-semibold">{selected.name}</h1><Star size={17} className="text-[#6d6e6f]" /><button className="flex items-center gap-1 text-xs text-[#6d6e6f]"><Circle size={12} />Set status</button></div>
-                            <div className="flex items-center gap-2"><div className="flex -space-x-2"><span className="grid size-7 place-items-center rounded-full border-2 border-white bg-[#4573d2] text-[10px] font-bold text-white dark:border-[#1e1f21]">KR</span><span className="grid size-7 place-items-center rounded-full border-2 border-white bg-[#00a88b] text-[10px] font-bold text-white dark:border-[#1e1f21]">WF</span></div><Button size="sm">Share</Button><Button size="sm" variant="outline"><SlidersHorizontal size={14} />Customize</Button></div>
+                            <div className="flex items-center gap-2"><div className="flex -space-x-2"><span className="grid size-7 place-items-center rounded-full border-2 border-white bg-[#4573d2] text-[10px] font-bold text-white dark:border-[#1e1f21]">KR</span><span className="grid size-7 place-items-center rounded-full border-2 border-white bg-[#00a88b] text-[10px] font-bold text-white dark:border-[#1e1f21]">WF</span></div><Button size="sm" onClick={shareProject}>Share</Button><Button size="sm" variant="outline"><SlidersHorizontal size={14} />Customize</Button></div>
                         </div>
                         <nav className="mt-3 flex gap-1 overflow-x-auto px-5">{views.map((item) => <button key={item.id} onClick={() => setView(item.id)} className={`border-b-2 px-3 py-3 text-sm font-semibold ${view === item.id ? 'border-[#4573d2] text-[#4573d2]' : 'border-transparent text-[#6d6e6f] hover:text-[#1e1f21] dark:hover:text-white'}`}>{item.label}</button>)}</nav>
                     </header>
@@ -128,16 +179,16 @@ export function AsanaPlanningView({ workspace }: { workspace: Workspace }) {
                     </div>
 
                     <div className="overflow-x-auto">
-                        {view === 'list' && <TaskList tasks={filteredTasks} onOpen={setSelectedTaskId} onCreate={createTask} onUpdate={updateTask} />}
-                        {view === 'board' && <TaskBoard tasks={filteredTasks} onOpen={setSelectedTaskId} />}
-                        {view === 'timeline' && <TaskTimeline tasks={filteredTasks} onOpen={setSelectedTaskId} />}
-                        {view === 'calendar' && <TaskCalendar tasks={filteredTasks} onOpen={setSelectedTaskId} />}
+                        {view === 'list' && <TaskList tasks={filteredTasks} onOpen={openTask} onCreate={createTask} onUpdate={updateTask} />}
+                        {view === 'board' && <TaskBoard tasks={filteredTasks} onOpen={openTask} />}
+                        {view === 'timeline' && <TaskTimeline tasks={filteredTasks} onOpen={openTask} />}
+                        {view === 'calendar' && <TaskCalendar tasks={filteredTasks} onOpen={openTask} />}
                         {view === 'dashboard' && <ProjectDashboard tasks={filteredTasks} />}
                     </div>
                 </> : <div className="grid min-h-[70vh] place-items-center p-8 text-center"><div><List className="mx-auto text-[#a2a0a2]" size={44} /><h2 className="mt-4 text-xl font-semibold">Select a project</h2><p className="mt-2 text-sm text-[#6d6e6f]">Choose a project from the sidebar or create a new one.</p></div></div>}
             </section>
         </div>
-        {selectedTaskId && selected && <AsanaTaskDetail taskId={selectedTaskId} projectId={selected.id} workspace={workspace} onClose={() => setSelectedTaskId(null)} onChanged={refreshProject} />}
+        {selectedTaskId && selected && <AsanaTaskDetail taskId={selectedTaskId} projectId={selected.id} workspace={workspace} onClose={closeTask} onChanged={refreshProject} />}
     </main>;
 }
 

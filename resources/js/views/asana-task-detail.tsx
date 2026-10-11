@@ -117,15 +117,17 @@ export function AsanaTaskDetail({ taskId, projectId, workspace, onClose, onChang
     }
 
     async function copyLink() {
-        const url = `${window.location.origin}/app?task=${taskId}`;
-        await navigator.clipboard.writeText(url);
+        const url = new URL(window.location.href);
+        url.searchParams.set('task', String(taskId));
+        await navigator.clipboard.writeText(url.toString());
         setMessage('Task link copied');
     }
 
     async function shareTask() {
-        const url = `${window.location.origin}/app?task=${taskId}`;
+        const url = new URL(window.location.href);
+        url.searchParams.set('task', String(taskId));
         if (navigator.share) {
-            await navigator.share({ title: task?.title, url });
+            await navigator.share({ title: task?.title, url: url.toString() });
             return;
         }
         await copyLink();

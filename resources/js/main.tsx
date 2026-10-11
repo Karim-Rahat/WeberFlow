@@ -56,6 +56,23 @@ type User = {
 };
 type ApiError = { message?: string; errors?: Record<string, string[]> };
 type AuthMode = 'login' | 'register' | 'forgot' | 'reset';
+type ProjectRoute = { workspaceSlug: string; projectId: number; taskId: number | null };
+
+function currentProjectRoute(): ProjectRoute | null {
+    const match = window.location.pathname.match(/^\/app\/([^/]+)\/(\d+)\/?$/);
+
+    if (!match) {
+        return null;
+    }
+
+    const taskId = Number(new URLSearchParams(window.location.search).get('task'));
+
+    return {
+        workspaceSlug: decodeURIComponent(match[1]),
+        projectId: Number(match[2]),
+        taskId: Number.isInteger(taskId) && taskId > 0 ? taskId : null,
+    };
+}
 
 const initialPreferences: Preferences = {
     assignments_email: true,
@@ -205,8 +222,9 @@ function Field({ label, errors, ...props }: { label: string; errors: Record<stri
 }
 
 function WorkspaceApp({ user, onUserChange }: { user: User; onUserChange: (user: User | null) => void }) {
+    const projectRoute = currentProjectRoute();
     const [sidebarOpen, setSidebarOpen] = useState(false);
-    const [view, setView] = useState<'home' | 'planning' | 'inbox' | 'admin' | 'settings'>('home');
+    const [view, setView] = useState<'home' | 'planning' | 'inbox' | 'admin' | 'settings'>(() => projectRoute ? 'planning' : 'home');
     const [theme, setTheme] = useState<'light' | 'dark'>(() => localStorage.getItem('weberflow-theme') === 'dark' ? 'dark' : 'light');
     const [query, setQuery] = useState('');
     const [workspaceMenu, setWorkspaceMenu] = useState(false);
@@ -229,6 +247,18 @@ function WorkspaceApp({ user, onUserChange }: { user: User; onUserChange: (user:
         onUserChange(response.data);
         setWorkspaceMenu(false);
     }
+
+    useEffect(() => {
+        if (!projectRoute || projectRoute.workspaceSlug === user.current_workspace.slug) {
+            return;
+        }
+
+        const targetWorkspace = user.workspaces.find((workspace) => workspace.slug === projectRoute.workspaceSlug);
+
+        if (targetWorkspace) {
+            void switchWorkspace(targetWorkspace.id);
+        }
+    }, [projectRoute?.workspaceSlug, user.current_workspace.slug]);
 
     const initials = user.name.split(' ').map((part) => part[0]).join('').slice(0, 2).toUpperCase();
 
@@ -266,7 +296,7 @@ function WorkspaceApp({ user, onUserChange }: { user: User; onUserChange: (user:
                     <span className="grid size-9 place-items-center rounded-full bg-brand-100 text-xs font-bold text-brand-700 dark:bg-brand-900 dark:text-brand-300">{initials}</span>
                 </header>
                 {!user.email_verified && <VerificationBanner />}
-                {view === 'settings' ? <SettingsView user={user} onUserChange={onUserChange} /> : view === 'planning' ? <AsanaPlanningView workspace={user.current_workspace} /> : view === 'inbox' ? <InboxView /> : view === 'admin' ? <AdminView /> : <Dashboard user={user} query={query} onCreateTask={() => setView('planning')} />}
+                {view === 'settings' ? <SettingsView user={user} onUserChange={onUserChange} /> : view === 'planning' ? <AsanaPlanningView workspace={user.current_workspace} initialProjectId={projectRoute?.workspaceSlug === user.current_workspace.slug ? projectRoute.projectId : null} initialTaskId={projectRoute?.taskId ?? null} /> : view === 'inbox' ? <InboxView /> : view === 'admin' ? <AdminView /> : <Dashboard user={user} query={query} onCreateTask={() => setView('planning')} />}
             </div>
         </div>
     );

@@ -23,6 +23,16 @@ class ProjectEntryTest extends TestCase
             ->assertSee('id="app"', false);
     }
 
+    public function test_shareable_project_url_renders_the_application_shell(): void
+    {
+        $response = $this->get('/app/ezway/32323232323');
+
+        $response
+            ->assertOk()
+            ->assertViewIs('app')
+            ->assertSee('id="app"', false);
+    }
+
     public function test_implementation_plan_is_available(): void
     {
         $response = $this->get('/implementation-plan');
