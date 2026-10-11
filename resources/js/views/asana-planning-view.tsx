@@ -2,7 +2,7 @@ import { useEffect, useMemo, useState, type FormEvent, type ReactNode } from 're
 import { CalendarDays, Check, ChevronDown, ChevronRight, Circle, Filter, LayoutDashboard, List, MoreHorizontal, Plus, Search, SlidersHorizontal, Star, Users } from 'lucide-react';
 import { Button } from '../components/ui/button';
 import { Input } from '../components/ui/input';
-import { TaskDetail } from './task-detail';
+import { AsanaTaskDetail } from './asana-task-detail';
 import { request, type Task, type Workspace } from './planning-view';
 
 type Project = {
@@ -137,7 +137,7 @@ export function AsanaPlanningView({ workspace }: { workspace: Workspace }) {
                 </> : <div className="grid min-h-[70vh] place-items-center p-8 text-center"><div><List className="mx-auto text-[#a2a0a2]" size={44} /><h2 className="mt-4 text-xl font-semibold">Select a project</h2><p className="mt-2 text-sm text-[#6d6e6f]">Choose a project from the sidebar or create a new one.</p></div></div>}
             </section>
         </div>
-        {selectedTaskId && selected && <TaskDetail taskId={selectedTaskId} projectId={selected.id} workspace={workspace} onClose={() => setSelectedTaskId(null)} onChanged={refreshProject} />}
+        {selectedTaskId && selected && <AsanaTaskDetail taskId={selectedTaskId} projectId={selected.id} workspace={workspace} onClose={() => setSelectedTaskId(null)} onChanged={refreshProject} />}
     </main>;
 }
 

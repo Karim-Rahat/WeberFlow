@@ -75,6 +75,22 @@ class ReleaseOneCoreWorkTest extends TestCase
         $this->assertDatabaseMissing('comments', ['task_id' => $task->id, 'body' => 'Hidden']);
     }
 
+    public function test_task_details_include_project_subtasks_and_collaboration_data(): void
+    {
+        [$owner, $member, $project] = $this->workspaceTeam();
+        $task = Task::factory()->create(['workspace_id' => $project->workspace_id, 'project_id' => $project->id, 'creator_id' => $owner->id, 'assignee_id' => $member->id]);
+        Task::factory()->create(['workspace_id' => $project->workspace_id, 'project_id' => $project->id, 'creator_id' => $owner->id, 'parent_id' => $task->id, 'title' => 'Review first draft']);
+        $task->comments()->create(['workspace_id' => $project->workspace_id, 'author_id' => $owner->id, 'body' => 'Ready for review.']);
+
+        $response = $this->actingAs($owner)->getJson('/api/v1/tasks/'.$task->id);
+
+        $response->assertOk()
+            ->assertJsonPath('data.project.name', $project->name)
+            ->assertJsonPath('data.assignee.id', $member->id)
+            ->assertJsonPath('data.subtasks.0.title', 'Review first draft')
+            ->assertJsonPath('data.comments.0.body', 'Ready for review.');
+    }
+
     private function workspaceTeam(): array
     {
         $owner = $this->createUserWithWorkspace('owner@example.com');

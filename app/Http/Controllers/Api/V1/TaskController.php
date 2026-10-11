@@ -18,7 +18,7 @@ class TaskController extends Controller
     {
         $this->authorizeTask($request, $task, 'view');
 
-        return new TaskResource($task->load(['assignee', 'predecessors', 'customFields', 'comments.author', 'attachments', 'activities.actor']));
+        return new TaskResource($task->load(['project:id,name', 'assignee', 'predecessors', 'subtasks.assignee', 'customFields', 'comments.author', 'attachments', 'activities.actor']));
     }
 
     public function update(UpdateTaskRequest $request, Task $task): TaskResource

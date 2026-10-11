@@ -23,6 +23,7 @@ export async function request<T>(url: string, options: RequestInit = {}): Promis
         ...options,
     });
     if (!response.ok) throw (await response.json().catch(() => ({ message: 'Something went wrong.' }))) as ApiError;
+    if (response.status === 204) return undefined as T;
     return response.json() as Promise<T>;
 }
 
