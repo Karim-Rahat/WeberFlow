@@ -91,6 +91,21 @@ class ReleaseOneCoreWorkTest extends TestCase
             ->assertJsonPath('data.comments.0.body', 'Ready for review.');
     }
 
+    public function test_task_assignee_can_be_changed_to_an_active_workspace_member(): void
+    {
+        [$owner, $member, $project] = $this->workspaceTeam();
+        $task = Task::factory()->create(['workspace_id' => $project->workspace_id, 'project_id' => $project->id, 'creator_id' => $owner->id, 'assignee_id' => null]);
+
+        $response = $this->actingAs($owner)->patchJson('/api/v1/tasks/'.$task->id, [
+            'assignee_id' => $member->id,
+        ]);
+
+        $response
+            ->assertOk()
+            ->assertJsonPath('data.assignee.id', $member->id);
+        $this->assertSame($member->id, $task->fresh()->assignee_id);
+    }
+
     private function workspaceTeam(): array
     {
         $owner = $this->createUserWithWorkspace('owner@example.com');

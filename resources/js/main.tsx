@@ -28,6 +28,7 @@ import { Label } from './components/ui/label';
 import { AsanaPlanningView } from './views/asana-planning-view';
 import { InboxView } from './views/inbox-view';
 import { AdminView } from './views/admin-view';
+import { PeopleView } from './views/people-view';
 import '../css/app.css';
 
 configureEcho({ broadcaster: 'reverb' });
@@ -224,7 +225,7 @@ function Field({ label, errors, ...props }: { label: string; errors: Record<stri
 function WorkspaceApp({ user, onUserChange }: { user: User; onUserChange: (user: User | null) => void }) {
     const projectRoute = currentProjectRoute();
     const [sidebarOpen, setSidebarOpen] = useState(false);
-    const [view, setView] = useState<'home' | 'planning' | 'inbox' | 'admin' | 'settings'>(() => projectRoute ? 'planning' : 'home');
+    const [view, setView] = useState<'home' | 'planning' | 'people' | 'inbox' | 'admin' | 'settings'>(() => projectRoute ? 'planning' : 'home');
     const [theme, setTheme] = useState<'light' | 'dark'>(() => localStorage.getItem('weberflow-theme') === 'dark' ? 'dark' : 'light');
     const [query, setQuery] = useState('');
     const [workspaceMenu, setWorkspaceMenu] = useState(false);
@@ -281,7 +282,7 @@ function WorkspaceApp({ user, onUserChange }: { user: User; onUserChange: (user:
                     <p className="mt-6 px-3 text-[11px] font-bold uppercase tracking-[.12em] text-[#78827b]">Workspace</p>
                     <NavButton active={view === 'planning'} icon={<FolderKanban size={17} />} label="Projects" onClick={() => setView('planning')} />
                     <NavButton active={view === 'planning'} icon={<CalendarRange size={17} />} label="Planning" onClick={() => setView('planning')} />
-                    <NavButton icon={<Users size={17} />} label="People" />
+                    <NavButton active={view === 'people'} icon={<Users size={17} />} label="People" onClick={() => setView('people')} />
                     {user.is_platform_admin && <><p className="mt-6 px-3 text-[11px] font-bold uppercase tracking-[.12em] text-[#78827b]">Platform</p><NavButton active={view === 'admin'} icon={<ShieldCheck size={17} />} label="Admin" onClick={() => setView('admin')} /></>}
                 </nav>
                 <div className="grid gap-1 border-t border-[#dce3dc] p-3 dark:border-[#303a33]"><NavButton active={view === 'settings'} icon={<Settings size={17} />} label="Settings" onClick={() => setView('settings')} /><NavButton icon={<LogOut size={17} />} label="Sign out" onClick={logout} /></div>
@@ -296,7 +297,7 @@ function WorkspaceApp({ user, onUserChange }: { user: User; onUserChange: (user:
                     <span className="grid size-9 place-items-center rounded-full bg-brand-100 text-xs font-bold text-brand-700 dark:bg-brand-900 dark:text-brand-300">{initials}</span>
                 </header>
                 {!user.email_verified && <VerificationBanner />}
-                {view === 'settings' ? <SettingsView user={user} onUserChange={onUserChange} /> : view === 'planning' ? <AsanaPlanningView workspace={user.current_workspace} initialProjectId={projectRoute?.workspaceSlug === user.current_workspace.slug ? projectRoute.projectId : null} initialTaskId={projectRoute?.taskId ?? null} /> : view === 'inbox' ? <InboxView /> : view === 'admin' ? <AdminView /> : <Dashboard user={user} query={query} onCreateTask={() => setView('planning')} />}
+                {view === 'settings' ? <SettingsView user={user} onUserChange={onUserChange} /> : view === 'planning' ? <AsanaPlanningView workspace={user.current_workspace} initialProjectId={projectRoute?.workspaceSlug === user.current_workspace.slug ? projectRoute.projectId : null} initialTaskId={projectRoute?.taskId ?? null} /> : view === 'people' ? <PeopleView workspace={user.current_workspace} /> : view === 'inbox' ? <InboxView /> : view === 'admin' ? <AdminView /> : <Dashboard user={user} query={query} onCreateTask={() => setView('planning')} />}
             </div>
         </div>
     );

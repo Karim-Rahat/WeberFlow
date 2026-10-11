@@ -59,6 +59,17 @@ class WorkspaceController extends Controller
     {
         abort_unless($request->user()->workspaces()->whereKey($workspace->getKey())->exists(), 404);
 
-        return response()->json(['data' => $workspace->members()->wherePivot('status', 'active')->orderBy('name')->get(['users.id', 'users.name', 'users.email'])]);
+        $members = $workspace->members()
+            ->wherePivot('status', 'active')
+            ->orderBy('name')
+            ->get(['users.id', 'users.name', 'users.email'])
+            ->map(fn ($member): array => [
+                'id' => $member->id,
+                'name' => $member->name,
+                'email' => $member->email,
+                'role' => $member->pivot->role instanceof WorkspaceRole ? $member->pivot->role->value : $member->pivot->role,
+            ]);
+
+        return response()->json(['data' => $members]);
     }
 }

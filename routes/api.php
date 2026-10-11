@@ -24,6 +24,7 @@ use App\Http\Controllers\Api\V1\TaskCommentController;
 use App\Http\Controllers\Api\V1\TaskController;
 use App\Http\Controllers\Api\V1\TaskDependencyController;
 use App\Http\Controllers\Api\V1\WorkspaceController;
+use App\Http\Controllers\Api\V1\WorkspaceMemberController;
 use Illuminate\Support\Facades\Route;
 
 Route::prefix('v1')->group(function (): void {
@@ -50,6 +51,9 @@ Route::prefix('v1')->group(function (): void {
         Route::post('/workspaces', [WorkspaceController::class, 'store'])->name('api.workspaces.store');
         Route::get('/workspaces/{workspace}', [WorkspaceController::class, 'show'])->name('api.workspaces.show');
         Route::get('/workspaces/{workspace}/members', [WorkspaceController::class, 'members'])->name('api.workspaces.members');
+        Route::post('/workspaces/{workspace}/members', [WorkspaceMemberController::class, 'store'])->name('api.workspace-members.store');
+        Route::patch('/workspaces/{workspace}/members/{member}', [WorkspaceMemberController::class, 'update'])->name('api.workspace-members.update');
+        Route::delete('/workspaces/{workspace}/members/{member}', [WorkspaceMemberController::class, 'destroy'])->name('api.workspace-members.destroy');
         Route::put('/current-workspace', CurrentWorkspaceController::class)->name('api.current-workspace.update');
 
         Route::get('/workspaces/{workspace}/projects', [ProjectController::class, 'index'])->name('api.projects.index');

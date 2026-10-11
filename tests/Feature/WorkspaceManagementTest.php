@@ -74,6 +74,40 @@ class WorkspaceManagementTest extends TestCase
         $this->assertNotSame($other->current_workspace_id, $user->fresh()->current_workspace_id);
     }
 
+    public function test_owner_can_add_an_existing_user_to_the_workspace(): void
+    {
+        $owner = $this->createUserWithWorkspace('owner@example.com', 'Owner Workspace');
+        $member = $this->createUserWithWorkspace('member@example.com', 'Member Workspace');
+
+        $response = $this->actingAs($owner)->postJson('/api/v1/workspaces/'.$owner->current_workspace_id.'/members', [
+            'email' => $member->email,
+            'role' => 'member',
+        ]);
+
+        $response
+            ->assertCreated()
+            ->assertJsonPath('data.email', $member->email)
+            ->assertJsonPath('data.role', 'member');
+        $this->assertDatabaseHas('workspace_members', [
+            'workspace_id' => $owner->current_workspace_id,
+            'user_id' => $member->id,
+            'role' => 'member',
+            'status' => 'active',
+        ]);
+    }
+
+    public function test_regular_member_cannot_manage_workspace_members(): void
+    {
+        $owner = $this->createUserWithWorkspace('owner@example.com', 'Owner Workspace');
+        $member = $this->createUserWithWorkspace('member@example.com', 'Member Workspace');
+        $target = $this->createUserWithWorkspace('target@example.com', 'Target Workspace');
+        $owner->currentWorkspace->members()->attach($member->id, ['role' => 'member', 'status' => 'active', 'joined_at' => now()]);
+
+        $this->actingAs($member)
+            ->postJson('/api/v1/workspaces/'.$owner->current_workspace_id.'/members', ['email' => $target->email, 'role' => 'member'])
+            ->assertForbidden();
+    }
+
     private function createUserWithWorkspace(string $email, string $workspaceName): User
     {
         return app(CreateUserWithWorkspace::class)->handle([
