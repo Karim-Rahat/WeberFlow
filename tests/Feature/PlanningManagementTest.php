@@ -23,7 +23,9 @@ class PlanningManagementTest extends TestCase
             'due_date' => '2026-11-10',
         ]);
 
-        $response->assertCreated()->assertJsonPath('data.name', 'Website launch');
+        $response->assertCreated()
+            ->assertJsonPath('data.name', 'Website launch')
+            ->assertJsonPath('data.status', 'on_track');
         $this->assertDatabaseHas('projects', ['workspace_id' => $user->current_workspace_id, 'name' => 'Website launch']);
         $this->assertDatabaseHas('project_sections', ['project_id' => $response->json('data.id'), 'name' => 'General']);
     }

@@ -29,7 +29,8 @@ class ProjectController extends Controller
         Gate::authorize('create', [Project::class, $workspace->id]);
 
         $project = $workspace->projects()->create([
-            ...$request->safe()->only(['name', 'description', 'status', 'start_date', 'due_date']),
+            ...$request->safe()->only(['name', 'description', 'start_date', 'due_date']),
+            'status' => $request->validated('status', 'on_track') ?? 'on_track',
             'owner_id' => $request->user()->id,
         ]);
 
