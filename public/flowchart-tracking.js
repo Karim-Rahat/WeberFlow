@@ -16,6 +16,7 @@
     'Workload',
   ]);
   const completionDate = 'October 11, 2026';
+  const phaseStartDate = 'October 12, 2026';
 
   function addSummary() {
     if (document.querySelector('.completion-summary')) return;
@@ -30,6 +31,7 @@
       <span>14 roadmap capabilities + platform admin delivered · ${completionDate}</span>
     `;
     target.insertAdjacentElement('afterend', summary);
+    summary.insertAdjacentHTML('beforeend', `<span>Release 3 started ${phaseStartDate}</span>`);
   }
 
   function markCapabilities() {
@@ -67,10 +69,33 @@
     });
   }
 
+  function markInProgress() {
+    document.querySelectorAll('.release').forEach((card) => {
+      const label = card.querySelector('span')?.textContent?.trim();
+      if (label !== 'Release 3' || card.classList.contains('in-progress')) return;
+
+      card.classList.add('in-progress');
+      const labelElement = card.querySelector('span');
+      if (!labelElement) return;
+
+      const row = document.createElement('div');
+      row.className = 'release-completion';
+      labelElement.before(row);
+      row.append(labelElement);
+      row.insertAdjacentHTML('beforeend', '<span class="progress-badge">In progress</span>');
+
+      const date = document.createElement('small');
+      date.className = 'completion-date';
+      date.textContent = `Started ${phaseStartDate}`;
+      card.append(date);
+    });
+  }
+
   function updateTracking() {
     addSummary();
     markCapabilities();
     markRelease();
+    markInProgress();
   }
 
   updateTracking();
