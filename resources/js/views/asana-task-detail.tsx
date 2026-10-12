@@ -135,8 +135,8 @@ export function AsanaTaskDetail({ taskId, projectId, workspace, onClose, onChang
 
     const dependencyOptions = useMemo(() => projectTasks.filter((candidate) => candidate.id !== taskId && !task?.predecessors.some((item) => item.id === candidate.id)), [projectTasks, task?.predecessors, taskId]);
 
-    return <div className="fixed inset-0 z-50 flex justify-end bg-black/30" onMouseDown={(event) => { if (event.currentTarget === event.target) onClose(); }}>
-        <aside className="flex h-full w-full max-w-[780px] flex-col border-l border-[#3d3e40] bg-white shadow-2xl dark:bg-[#1e1f21]">
+    return <div className="drawer-backdrop-enter fixed inset-0 z-50 flex justify-end bg-black/30" onMouseDown={(event) => { if (event.currentTarget === event.target) onClose(); }}>
+        <aside className="drawer-panel-enter flex h-full w-full max-w-[780px] flex-col border-l border-[#3d3e40] bg-white shadow-2xl dark:bg-[#1e1f21]">
             {!task ? <div className="grid h-full place-items-center"><LoaderCircle className="animate-spin text-[#4573d2]" /></div> : <>
                 <header className="flex shrink-0 items-center justify-between border-b border-[#edeae9] px-5 py-3 dark:border-[#3d3e40]">
                     <button onClick={() => update({ status: task.status === 'complete' ? 'not_started' : 'complete' }, task.status === 'complete' ? 'Task reopened' : 'Task completed')} className={`flex items-center gap-2 rounded-md border px-3 py-1.5 text-sm font-semibold ${task.status === 'complete' ? 'border-[#00a88b] bg-[#e8f7f2] text-[#147d64] dark:bg-[#163c33] dark:text-[#6ee7c5]' : 'border-[#cfcbca] hover:bg-[#f7f5f4] dark:border-[#565557] dark:hover:bg-[#292a2c]'}`}><span className={`grid size-4 place-items-center rounded-full border ${task.status === 'complete' ? 'border-[#00a88b] bg-[#00a88b] text-white' : 'border-[#8b8c8d]'}`}>{task.status === 'complete' && <Check size={11} />}</span>{task.status === 'complete' ? 'Completed' : 'Mark complete'}</button>
@@ -144,7 +144,7 @@ export function AsanaTaskDetail({ taskId, projectId, workspace, onClose, onChang
                 </header>
 
                 <div className="min-h-0 flex-1 overflow-y-auto">
-                    <div className="mx-auto grid max-w-[690px] gap-7 px-6 py-7 sm:px-8">
+                    <div className="drawer-content-enter mx-auto grid max-w-[690px] gap-7 px-6 py-7 sm:px-8">
                         {message && <div className="flex items-center gap-2 rounded-lg bg-[#e8f7f2] px-3 py-2 text-sm text-[#147d64] dark:bg-[#163c33] dark:text-[#6ee7c5]"><Check size={15} />{message}</div>}
                         <input key={`${task.id}-${task.title}`} defaultValue={task.title} onBlur={(event) => { if (event.target.value.trim() && event.target.value !== task.title) update({ title: event.target.value.trim() }, 'Title updated'); }} className="w-full bg-transparent text-2xl font-semibold outline-none placeholder:text-[#a2a0a2]" aria-label="Task title" />
 

@@ -1,5 +1,47 @@
 @import 'tailwindcss';
 
+@keyframes drawer-backdrop-in {
+    from { opacity: 0; }
+    to { opacity: 1; }
+}
+
+@keyframes drawer-panel-in {
+    from { opacity: 0; transform: translate3d(32px, 0, 0) scale(.985); }
+    to { opacity: 1; transform: translate3d(0, 0, 0) scale(1); }
+}
+
+@keyframes drawer-content-in {
+    from { opacity: 0; transform: translateY(10px); }
+    to { opacity: 1; transform: translateY(0); }
+}
+
+.drawer-backdrop-enter {
+    animation: drawer-backdrop-in 220ms cubic-bezier(.22, 1, .36, 1) both;
+    backdrop-filter: blur(3px);
+}
+
+.drawer-panel-enter {
+    animation: drawer-panel-in 360ms cubic-bezier(.22, 1, .36, 1) both;
+    will-change: transform, opacity;
+}
+
+.drawer-content-enter > * {
+    animation: drawer-content-in 360ms cubic-bezier(.22, 1, .36, 1) both;
+}
+
+.drawer-content-enter > *:nth-child(2) { animation-delay: 35ms; }
+.drawer-content-enter > *:nth-child(3) { animation-delay: 70ms; }
+.drawer-content-enter > *:nth-child(4) { animation-delay: 105ms; }
+.drawer-content-enter > *:nth-child(5) { animation-delay: 140ms; }
+
+@media (prefers-reduced-motion: reduce) {
+    .drawer-backdrop-enter,
+    .drawer-panel-enter,
+    .drawer-content-enter > * {
+        animation: none;
+    }
+}
+
 @source '../../vendor/laravel/framework/src/Illuminate/Pagination/resources/views/*.blade.php';
 @source '../../storage/framework/views/*.php';
 @source '../js/**/*.{js,ts,jsx,tsx}';
