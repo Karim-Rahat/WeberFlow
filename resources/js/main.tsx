@@ -277,7 +277,7 @@ function WorkspaceApp({ user, onUserChange }: { user: User; onUserChange: (user:
                 </div>
                 <nav className="mt-5 grid flex-1 content-start gap-1 px-3">
                     <NavButton active={view === 'home'} icon={<Home size={17} />} label="Home" onClick={() => setView('home')} />
-                    <NavButton icon={<CheckCircle2 size={17} />} label="My tasks" />
+                    <NavButton active={view === 'planning'} icon={<CheckCircle2 size={17} />} label="My tasks" onClick={() => setView('planning')} />
                     <NavButton active={view === 'inbox'} icon={<Inbox size={17} />} label="Inbox" onClick={() => setView('inbox')} />
                     <p className="mt-6 px-3 text-[11px] font-bold uppercase tracking-[.12em] text-[#78827b]">Workspace</p>
                     <NavButton active={view === 'planning'} icon={<FolderKanban size={17} />} label="Projects" onClick={() => setView('planning')} />
