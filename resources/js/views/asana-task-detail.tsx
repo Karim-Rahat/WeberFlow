@@ -201,7 +201,8 @@ function statusClass(status: string): string {
     return status === 'complete' ? 'bg-[#67d7c4] text-[#173f38]' : status === 'in_progress' ? 'bg-[#9ec5ff] text-[#153d75]' : status === 'blocked' ? 'bg-[#ffb4a8] text-[#5d1f17]' : 'bg-[#e8e5e4] text-[#494a4b]';
 }
 
-function activityText(event: string): string {
+function activityText(event: string | null | undefined): string {
     const labels: Record<string, string> = { 'task.created': 'created this task', 'task.updated': 'updated this task', 'comment.created': 'commented', 'attachment.created': 'added an attachment', 'dependency.created': 'added a dependency', 'dependency.deleted': 'removed a dependency' };
-    return labels[event] ?? event.replaceAll('.', ' ');
+    const normalizedEvent = event ?? 'activity.updated';
+    return labels[normalizedEvent] ?? normalizedEvent.replaceAll('.', ' ');
 }
