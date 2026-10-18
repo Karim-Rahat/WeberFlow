@@ -158,3 +158,41 @@ dl { margin: 24px 0 0; display: grid; gap: 0; border-top: 1px solid var(--border
     .journey-track { grid-template-columns: 1fr; }.journey-step { min-height: 130px; }.journey-step .number { margin-bottom: 20px; }
 }
 @media (prefers-reduced-motion: reduce) { html { scroll-behavior: auto; } *, *::before, *::after { transition-duration: .01ms !important; } }
+
+/* Motion */
+@keyframes fc-rise { from { opacity: 0; transform: translate3d(0, 12px, 0); } to { opacity: 1; transform: none; } }
+@keyframes fc-fade { from { opacity: 0; } to { opacity: 1; } }
+@keyframes fc-pop { from { opacity: 0; transform: scale(.96); } to { opacity: 1; transform: none; } }
+@keyframes fc-draw { from { stroke-dashoffset: 620; } to { stroke-dashoffset: 0; } }
+
+.topbar { animation: fc-fade .45s ease both; }
+.hero > div:first-child { animation: fc-rise .5s cubic-bezier(.22, 1, .36, 1) both; }
+.hero .progress-card { animation: fc-rise .5s cubic-bezier(.22, 1, .36, 1) both .09s; }
+.controls { animation: fc-fade .45s ease both .14s; }
+
+.flow-column { animation: fc-fade .4s ease both; }
+.journey-step,
+.flow-node,
+.release,
+.request-path li { animation: fc-rise .5s cubic-bezier(.22, 1, .36, 1) both; }
+
+.journey-step:nth-child(1), .flow-node:nth-child(1), .release:nth-child(1), .request-path li:nth-child(1) { animation-delay: .04s; }
+.journey-step:nth-child(2), .flow-node:nth-child(2), .release:nth-child(2), .request-path li:nth-child(2) { animation-delay: .09s; }
+.journey-step:nth-child(3), .flow-node:nth-child(3), .release:nth-child(3), .request-path li:nth-child(3) { animation-delay: .14s; }
+.journey-step:nth-child(4), .flow-node:nth-child(4), .release:nth-child(4), .request-path li:nth-child(4) { animation-delay: .19s; }
+.journey-step:nth-child(5), .flow-node:nth-child(5), .release:nth-child(5), .request-path li:nth-child(5) { animation-delay: .24s; }
+.journey-step:nth-child(6), .flow-node:nth-child(6), .request-path li:nth-child(6) { animation-delay: .29s; }
+.journey-step:nth-child(n+7), .flow-node:nth-child(n+7) { animation-delay: .34s; }
+
+.connectors path { stroke-dasharray: 620; animation: fc-draw .7s ease both; }
+.completion-summary { animation: fc-pop .3s cubic-bezier(.22, 1, .36, 1) both; }
+
+dialog[open]::backdrop { animation: fc-fade .25s ease both; }
+dialog[open] .dialog-shell { animation: fc-pop .3s cubic-bezier(.22, 1, .36, 1) both; }
+
+@media (prefers-reduced-motion: reduce) {
+    .topbar, .hero > div:first-child, .hero .progress-card, .controls,
+    .flow-column, .journey-step, .flow-node, .release, .request-path li,
+    .connectors path, .completion-summary, dialog[open]::backdrop,
+    dialog[open] .dialog-shell { animation: none !important; }
+}

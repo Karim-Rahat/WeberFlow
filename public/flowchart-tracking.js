@@ -14,6 +14,8 @@
     'Timeline & dependency',
     'Custom workflows',
     'Workload',
+    'Live collaboration',
+    'Direct messages',
   ]);
   const completionDate = 'October 11, 2026';
   const phaseStartDate = 'October 12, 2026';
@@ -21,14 +23,14 @@
   function addSummary() {
     if (document.querySelector('.completion-summary')) return;
 
-    const target = document.querySelector('.flow-toolbar, .legend, .flowchart');
+    const target = document.querySelector('.flow-toolbar, .legend, .controls, .flowchart, .hero');
     if (!target) return;
 
     const summary = document.createElement('div');
     summary.className = 'completion-summary';
     summary.innerHTML = `
       <strong>✓ Releases 0, 1, and 2 complete</strong>
-      <span>14 roadmap capabilities + platform admin delivered · ${completionDate}</span>
+      <span>16 roadmap capabilities + platform admin, direct messaging and real-time sync delivered · ${completionDate}</span>
     `;
     target.insertAdjacentElement('afterend', summary);
     summary.insertAdjacentHTML('beforeend', `<span>Release 3 started ${phaseStartDate}</span>`);
