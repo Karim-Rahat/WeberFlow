@@ -14,7 +14,6 @@ import {
     Menu,
     Moon,
     Plus,
-    Search,
     Settings,
     ShieldCheck,
     Sun,
@@ -26,6 +25,7 @@ import { Card } from './components/ui/card';
 import { Input } from './components/ui/input';
 import { Label } from './components/ui/label';
 import { AsanaPlanningView } from './views/asana-planning-view';
+import { GlobalSearch } from './views/global-search';
 import { InboxView } from './views/inbox-view';
 import { AdminView } from './views/admin-view';
 import { PeopleView } from './views/people-view';
@@ -227,8 +227,15 @@ function WorkspaceApp({ user, onUserChange }: { user: User; onUserChange: (user:
     const [sidebarOpen, setSidebarOpen] = useState(false);
     const [view, setView] = useState<'home' | 'planning' | 'people' | 'inbox' | 'admin' | 'settings'>(() => projectRoute ? 'planning' : 'home');
     const [theme, setTheme] = useState<'light' | 'dark'>(() => localStorage.getItem('weberflow-theme') === 'dark' ? 'dark' : 'light');
-    const [query, setQuery] = useState('');
+    const [planningTarget, setPlanningTarget] = useState<{ projectId: number; taskId: number | null } | null>(null);
+    const [planningNonce, setPlanningNonce] = useState(0);
     const [workspaceMenu, setWorkspaceMenu] = useState(false);
+
+    function openInPlanning(projectId: number, taskId: number | null) {
+        setPlanningTarget({ projectId, taskId });
+        setPlanningNonce((current) => current + 1);
+        setView('planning');
+    }
 
     useEffect(() => {
         document.documentElement.classList.toggle('dark', theme === 'dark');
@@ -291,13 +298,13 @@ function WorkspaceApp({ user, onUserChange }: { user: User; onUserChange: (user:
             <div className="min-w-0">
                 <header className="sticky top-0 z-20 flex h-17 items-center gap-3 border-b border-[#dce3dc] bg-white/90 px-4 backdrop-blur-xl dark:border-[#303a33] dark:bg-[#181d1a]/90 sm:px-6">
                     <button className="rounded-lg p-2 lg:hidden" onClick={() => setSidebarOpen(true)}><Menu size={20} /></button>
-                    <div className="relative max-w-xl flex-1"><Search className="absolute left-3 top-1/2 -translate-y-1/2 text-[#7a857e]" size={17} /><Input value={query} onChange={(event) => setQuery(event.target.value)} className="h-10 bg-[#f7f8f4] pl-10 dark:bg-[#222a25]" placeholder="Search WeberFlow" /></div>
+                    <GlobalSearch workspace={user.current_workspace} onOpenProject={(projectId) => openInPlanning(projectId, null)} onOpenTask={(projectId, taskId) => openInPlanning(projectId, taskId)} onOpenPerson={() => setView('people')} />
                     <Button variant="ghost" size="icon" aria-label="Toggle theme" onClick={() => setTheme(theme === 'light' ? 'dark' : 'light')}>{theme === 'light' ? <Moon size={18} /> : <Sun size={18} />}</Button>
                     <Button variant="ghost" size="icon" aria-label="Notifications"><Bell size={18} /></Button>
                     <span className="grid size-9 place-items-center rounded-full bg-brand-100 text-xs font-bold text-brand-700 dark:bg-brand-900 dark:text-brand-300">{initials}</span>
                 </header>
                 {!user.email_verified && <VerificationBanner />}
-                <div key={view} className="view-enter">{view === 'settings' ? <SettingsViewV2 user={user} onUserChange={onUserChange} /> : view === 'planning' ? <AsanaPlanningView workspace={user.current_workspace} initialProjectId={projectRoute?.workspaceSlug === user.current_workspace.slug ? projectRoute.projectId : null} initialTaskId={projectRoute?.taskId ?? null} /> : view === 'people' ? <PeopleView workspace={user.current_workspace} /> : view === 'inbox' ? <InboxView user={user} workspace={user.current_workspace} /> : view === 'admin' ? <AdminView /> : <Dashboard user={user} query={query} onCreateTask={() => setView('planning')} />}</div>
+                <div key={view} className="view-enter">{view === 'settings' ? <SettingsViewV2 user={user} onUserChange={onUserChange} /> : view === 'planning' ? <AsanaPlanningView key={planningNonce} workspace={user.current_workspace} initialProjectId={planningTarget?.projectId ?? (projectRoute?.workspaceSlug === user.current_workspace.slug ? projectRoute.projectId : null)} initialTaskId={planningTarget ? planningTarget.taskId : projectRoute?.taskId ?? null} /> : view === 'people' ? <PeopleView workspace={user.current_workspace} /> : view === 'inbox' ? <InboxView user={user} workspace={user.current_workspace} /> : view === 'admin' ? <AdminView /> : <Dashboard user={user} query="" onCreateTask={() => setView('planning')} />}</div>
             </div>
         </div>
     );

@@ -20,6 +20,7 @@ use App\Http\Controllers\Api\V1\ProjectFormController;
 use App\Http\Controllers\Api\V1\ProjectSectionController;
 use App\Http\Controllers\Api\V1\ProjectTaskController;
 use App\Http\Controllers\Api\V1\ProjectTemplateController;
+use App\Http\Controllers\Api\V1\SearchController;
 use App\Http\Controllers\Api\V1\TaskAttachmentController;
 use App\Http\Controllers\Api\V1\TaskCommentController;
 use App\Http\Controllers\Api\V1\TaskController;
@@ -40,6 +41,7 @@ Route::prefix('v1')->group(function (): void {
         Route::delete('/auth/session', [SessionController::class, 'destroy'])->name('api.auth.logout');
         Route::get('/me', [ProfileController::class, 'show'])->name('api.profile.show');
         Route::patch('/me', [ProfileController::class, 'update'])->name('api.profile.update');
+        Route::get('/search', SearchController::class)->name('api.search');
 
         Route::get('/email/verify/{id}/{hash}', VerifyEmailController::class)
             ->middleware('signed')
