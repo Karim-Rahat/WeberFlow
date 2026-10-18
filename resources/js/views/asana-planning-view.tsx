@@ -12,7 +12,10 @@ type Project = {
     status: string | null;
     tasks_count: number;
     tasks?: Task[];
+    sections?: Section[];
 };
+
+type Section = { id: number; name: string; position: number };
 
 type View = 'list' | 'board' | 'timeline' | 'calendar' | 'dashboard';
 type Member = { id: number; name: string; email: string };
@@ -131,7 +134,7 @@ export function AsanaPlanningView({ workspace, initialProjectId = null, initialT
         form.reset();
     }
 
-    async function createTask(title: string, isMilestone = false) {
+    async function createTask(title: string, isMilestone = false, sectionId: number | null = null) {
         if (!selected || !title.trim()) {
             return;
         }
@@ -139,10 +142,24 @@ export function AsanaPlanningView({ workspace, initialProjectId = null, initialT
         await fetch('/sanctum/csrf-cookie', { credentials: 'include' });
         await request(`/api/v1/projects/${selected.id}/tasks`, {
             method: 'POST',
-            body: JSON.stringify({ title: title.trim(), is_milestone: isMilestone }),
+            body: JSON.stringify({ title: title.trim(), is_milestone: isMilestone, ...(sectionId ? { section_id: sectionId } : {}) }),
         });
         await refreshProject();
         setNotice(isMilestone ? 'Milestone added' : 'Task added');
+    }
+
+    async function createSection(name: string) {
+        if (!selected || !name.trim()) {
+            return;
+        }
+
+        await fetch('/sanctum/csrf-cookie', { credentials: 'include' });
+        await request(`/api/v1/projects/${selected.id}/sections`, {
+            method: 'POST',
+            body: JSON.stringify({ name: name.trim() }),
+        });
+        await refreshProject();
+        setNotice('Section added');
     }
 
     async function updateTask(task: Task, fields: Record<string, unknown>) {
@@ -246,7 +263,7 @@ export function AsanaPlanningView({ workspace, initialProjectId = null, initialT
                     </div>
 
                     <div className="overflow-x-auto">
-                        {view === 'list' && <TaskList tasks={filteredTasks} members={members} groupBy={groupBy} options={listOptions} onOpen={openTask} onCreate={createTask} onUpdate={updateTask} />}
+                        {view === 'list' && <TaskList tasks={filteredTasks} members={members} groupBy={groupBy} options={listOptions} sections={selected.sections ?? []} onOpen={openTask} onCreate={createTask} onCreateSection={createSection} onUpdate={updateTask} />}
                         {view === 'board' && <TaskBoard tasks={filteredTasks} onOpen={openTask} />}
                         {view === 'timeline' && <TaskTimeline tasks={filteredTasks} onOpen={openTask} />}
                         {view === 'calendar' && <TaskCalendar tasks={filteredTasks} onOpen={openTask} />}
@@ -259,20 +276,41 @@ export function AsanaPlanningView({ workspace, initialProjectId = null, initialT
     </main>;
 }
 
-function TaskList({ tasks, members, groupBy, options, onOpen, onCreate, onUpdate }: { tasks: Task[]; members: Member[]; groupBy: GroupBy; options: ListOptions; onOpen: (id: number) => void; onCreate: (title: string, isMilestone?: boolean) => Promise<void>; onUpdate: (task: Task, fields: Record<string, unknown>) => Promise<void> }) {
-    const groups = taskGroups(tasks, groupBy);
+function TaskList({ tasks, members, groupBy, options, sections, onOpen, onCreate, onCreateSection, onUpdate }: { tasks: Task[]; members: Member[]; groupBy: GroupBy; options: ListOptions; sections: Section[]; onOpen: (id: number) => void; onCreate: (title: string, isMilestone?: boolean, sectionId?: number | null) => Promise<void>; onCreateSection: (name: string) => Promise<void>; onUpdate: (task: Task, fields: Record<string, unknown>) => Promise<void> }) {
+    const groups = taskGroups(tasks, groupBy, sections);
     const columns = ['minmax(320px,1fr)', options.assignee && '170px', options.dueDate && '130px', options.priority && '120px', options.status && '140px'].filter(Boolean).join(' ');
 
     return <div className="min-w-[760px] px-6 pb-12">
         <div className="grid border-b border-[#edeae9] text-xs text-[#6d6e6f] dark:border-[#3d3e40]" style={{ gridTemplateColumns: columns }}><span className="px-2 py-3">Name</span>{options.assignee && <span className="border-l border-[#edeae9] px-3 py-3 dark:border-[#3d3e40]">Assignee</span>}{options.dueDate && <span className="border-l border-[#edeae9] px-3 py-3 dark:border-[#3d3e40]">Due date</span>}{options.priority && <span className="border-l border-[#edeae9] px-3 py-3 dark:border-[#3d3e40]">Priority</span>}{options.status && <span className="border-l border-[#edeae9] px-3 py-3 dark:border-[#3d3e40]">Task progress</span>}</div>
         {groups.map((group) => <section key={group.title} className="pt-4"><h2 className="flex items-center gap-2 px-2 py-2 font-semibold"><ChevronDown size={16} />{group.title}<span className="text-xs font-normal text-[#8b8c8d]">{group.tasks.length}</span></h2>
             {group.tasks.map((task) => <TaskRow key={task.id} task={task} members={members} options={options} columns={columns} onOpen={onOpen} onUpdate={onUpdate} />)}
-            {groupBy === 'section' && <InlineAddTask onCreate={(title) => onCreate(title, group.milestone)} />}
+            {groupBy === 'section' && <InlineAddTask onCreate={(title) => onCreate(title, false, group.sectionId)} />}
         </section>)}
         {groups.length === 0 && <div className="grid min-h-44 place-items-center text-sm text-[#8b8c8d]">No tasks match these filters.</div>}
         {groupBy !== 'section' && <InlineAddTask onCreate={onCreate} />}
-        {groupBy === 'section' && <button className="mt-4 flex items-center gap-2 px-2 py-2 text-sm font-semibold text-[#6d6e6f]"><Plus size={17} />Add section</button>}
+        {groupBy === 'section' && <AddSection onAdd={onCreateSection} />}
     </div>;
+}
+
+function AddSection({ onAdd }: { onAdd: (name: string) => Promise<void> }) {
+    const [editing, setEditing] = useState(false);
+    const [name, setName] = useState('');
+
+    async function submit(event: FormEvent<HTMLFormElement>) {
+        event.preventDefault();
+        if (!name.trim()) {
+            return;
+        }
+        await onAdd(name.trim());
+        setName('');
+        setEditing(false);
+    }
+
+    if (!editing) {
+        return <button onClick={() => setEditing(true)} className="mt-4 flex items-center gap-2 px-2 py-2 text-sm font-semibold text-[#6d6e6f] hover:text-[#1e1f21] dark:hover:text-white"><Plus size={17} />Add section</button>;
+    }
+
+    return <form onSubmit={submit} className="mt-4 flex items-center gap-2 px-2"><Input autoFocus value={name} onChange={(event) => setName(event.target.value)} placeholder="Section name" className="h-9 min-w-64 rounded-lg" /><Button type="submit" size="sm">Add section</Button><Button type="button" size="sm" variant="ghost" onClick={() => setEditing(false)}>Cancel</Button></form>;
 }
 
 function TaskRow({ task, members, options, columns, onOpen, onUpdate }: { task: Task; members: Member[]; options: ListOptions; columns: string; onOpen: (id: number) => void; onUpdate: (task: Task, fields: Record<string, unknown>) => Promise<void> }) {

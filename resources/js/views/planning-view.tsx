@@ -7,7 +7,7 @@ import { Label } from '../components/ui/label';
 import { TaskDetail } from './task-detail';
 
 export type Workspace = { id: number; name: string; slug: string; role: string };
-export type Task = { id: number; title: string; description?: string | null; status: string; priority: string; start_date: string | null; due_date: string | null; is_milestone: boolean; recurrence?: string | null; recurrence_interval?: number; assignee?: { id: number; name: string } | null; predecessors: Task[]; blocked_by_dependency?: boolean };
+export type Task = { id: number; title: string; description?: string | null; status: string; priority: string; start_date: string | null; due_date: string | null; is_milestone: boolean; section_id?: number | null; recurrence?: string | null; recurrence_interval?: number; assignee?: { id: number; name: string } | null; predecessors: Task[]; blocked_by_dependency?: boolean };
 type CustomField = { id: number; name: string; type: string; is_required: boolean };
 type ProjectForm = { id: number; name: string; fields: { label: string; type: string; required: boolean }[] };
 type Project = { id: number; name: string; description: string | null; status: string; start_date: string | null; due_date: string | null; tasks_count: number; tasks?: Task[]; custom_fields?: CustomField[]; forms?: ProjectForm[] };

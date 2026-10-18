@@ -46,6 +46,7 @@ class ProjectController extends Controller
 
         return new ProjectResource($project->load([
             'tasks' => fn ($query) => $query->with(['assignee', 'predecessors.assignee', 'customFields']),
+            'sections',
             'customFields',
             'forms',
         ])->loadCount('tasks'));

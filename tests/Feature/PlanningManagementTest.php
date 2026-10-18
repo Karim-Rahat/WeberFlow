@@ -102,6 +102,33 @@ class PlanningManagementTest extends TestCase
             ->assertJsonPath('data.0.blocked', 1);
     }
 
+    public function test_owner_creates_section_and_it_is_returned_with_the_project(): void
+    {
+        $user = $this->createUserWithWorkspace('planner@example.com');
+        $project = Project::factory()->create(['workspace_id' => $user->current_workspace_id, 'owner_id' => $user->id]);
+
+        $this->actingAs($user)->postJson('/api/v1/projects/'.$project->id.'/sections', ['name' => 'Delivery'])
+            ->assertCreated()
+            ->assertJsonPath('data.name', 'Delivery');
+
+        $this->actingAs($user)->getJson('/api/v1/projects/'.$project->id)
+            ->assertOk()
+            ->assertJsonFragment(['name' => 'Delivery']);
+    }
+
+    public function test_task_can_be_created_inside_a_section(): void
+    {
+        $user = $this->createUserWithWorkspace('planner@example.com');
+        $project = Project::factory()->create(['workspace_id' => $user->current_workspace_id, 'owner_id' => $user->id]);
+        $section = $project->sections()->create(['name' => 'Delivery', 'position' => 0]);
+
+        $this->actingAs($user)->postJson('/api/v1/projects/'.$project->id.'/tasks', [
+            'title' => 'Ship it',
+            'section_id' => $section->id,
+        ])->assertCreated()
+            ->assertJsonPath('data.section_id', $section->id);
+    }
+
     private function createUserWithWorkspace(string $email): User
     {
         return app(CreateUserWithWorkspace::class)->handle([
