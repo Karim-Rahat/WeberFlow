@@ -20,6 +20,7 @@ use App\Http\Controllers\Api\V1\ProjectFormController;
 use App\Http\Controllers\Api\V1\ProjectSectionController;
 use App\Http\Controllers\Api\V1\ProjectTaskController;
 use App\Http\Controllers\Api\V1\ProjectTemplateController;
+use App\Http\Controllers\Api\V1\SavedSearchController;
 use App\Http\Controllers\Api\V1\SearchController;
 use App\Http\Controllers\Api\V1\TaskAttachmentController;
 use App\Http\Controllers\Api\V1\TaskCommentController;
@@ -42,6 +43,9 @@ Route::prefix('v1')->group(function (): void {
         Route::get('/me', [ProfileController::class, 'show'])->name('api.profile.show');
         Route::patch('/me', [ProfileController::class, 'update'])->name('api.profile.update');
         Route::get('/search', SearchController::class)->name('api.search');
+        Route::get('/saved-searches', [SavedSearchController::class, 'index'])->name('api.saved-searches.index');
+        Route::post('/saved-searches', [SavedSearchController::class, 'store'])->name('api.saved-searches.store');
+        Route::delete('/saved-searches/{savedSearch}', [SavedSearchController::class, 'destroy'])->name('api.saved-searches.destroy');
 
         Route::get('/email/verify/{id}/{hash}', VerifyEmailController::class)
             ->middleware('signed')

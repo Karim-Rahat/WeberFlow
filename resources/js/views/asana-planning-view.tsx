@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useState, type FormEvent, type ReactNode } from 'react';
-import { CalendarDays, Check, ChevronDown, ChevronRight, Filter, LayoutDashboard, List, MoreHorizontal, Pencil, Plus, Search, SlidersHorizontal, Star, Users } from 'lucide-react';
+import { CalendarDays, Check, ChevronDown, ChevronRight, Filter, LayoutDashboard, List, MoreHorizontal, Pencil, Plus, Search, SlidersHorizontal, Star, Trash2, Users } from 'lucide-react';
 import { Button } from '../components/ui/button';
 import { Input } from '../components/ui/input';
 import { AsanaTaskDetail } from './asana-task-detail';
@@ -31,6 +31,7 @@ type Member = { id: number; name: string; email: string };
 type GroupBy = 'section' | 'status' | 'priority' | 'assignee';
 type SortBy = 'position' | 'title' | 'due_date' | 'priority' | 'assignee';
 type Filters = { status: string; priority: string; assignee: string; due: string };
+type SavedSearch = { id: number; name: string; filters: { status?: string; priority?: string; assignee?: string; due?: string; sortBy?: SortBy; sortDirection?: 'asc' | 'desc'; groupBy?: GroupBy } };
 type ListOptions = { showCompleted: boolean; compact: boolean; assignee: boolean; dueDate: boolean; priority: boolean; status: boolean };
 
 const views: { id: View; label: string }[] = [
@@ -58,9 +59,13 @@ export function AsanaPlanningView({ workspace, initialProjectId = null, initialT
     const [listOptions, setListOptions] = useState<ListOptions>({ showCompleted: true, compact: false, assignee: true, dueDate: true, priority: true, status: true });
     const [editingProject, setEditingProject] = useState(false);
     const [statusMenu, setStatusMenu] = useState(false);
+    const [savedSearches, setSavedSearches] = useState<SavedSearch[]>([]);
+    const [savedName, setSavedName] = useState('');
+    const [savingSearch, setSavingSearch] = useState(false);
 
     useEffect(() => {
         request<{ data: Member[] }>(`/api/v1/workspaces/${workspace.id}/members`).then(({ data }) => setMembers(data));
+        request<{ data: SavedSearch[] }>('/api/v1/saved-searches').then(({ data }) => setSavedSearches(data));
         request<{ data: Project[] }>(`/api/v1/workspaces/${workspace.id}/projects`).then(({ data }) => {
             setProjects(data);
             const initialProject = data.find((project) => project.id === initialProjectId) ?? data[0];
@@ -221,6 +226,59 @@ export function AsanaPlanningView({ workspace, initialProjectId = null, initialT
     }, [selected?.tasks, query, filters, sortBy, sortDirection, listOptions.showCompleted]);
 
     const activeFilterCount = Object.values(filters).filter((value) => value !== 'all').length;
+
+    async function saveCurrentSearch() {
+        const name = savedName.trim();
+
+        if (!name || savingSearch) {
+            return;
+        }
+
+        setSavingSearch(true);
+
+        try {
+            const { data } = await request<{ data: SavedSearch }>('/api/v1/saved-searches', {
+                method: 'POST',
+                body: JSON.stringify({ name, filters: { ...filters, sortBy, sortDirection, groupBy } }),
+            });
+            setSavedSearches((current) => [data, ...current]);
+            setSavedName('');
+            setNotice(`Saved view "${data.name}"`);
+        } catch {
+            setNotice('Unable to save this view');
+        } finally {
+            setSavingSearch(false);
+        }
+    }
+
+    function applySavedSearch(search: SavedSearch) {
+        setFilters({
+            status: search.filters.status ?? 'all',
+            priority: search.filters.priority ?? 'all',
+            assignee: search.filters.assignee ?? 'all',
+            due: search.filters.due ?? 'all',
+        });
+
+        if (search.filters.sortBy) {
+            setSortBy(search.filters.sortBy);
+        }
+
+        if (search.filters.sortDirection) {
+            setSortDirection(search.filters.sortDirection);
+        }
+
+        if (search.filters.groupBy) {
+            setGroupBy(search.filters.groupBy);
+        }
+
+        setNotice(`Applied saved view "${search.name}"`);
+        setOpenMenu(null);
+    }
+
+    async function deleteSavedSearch(id: number) {
+        await request(`/api/v1/saved-searches/${id}`, { method: 'DELETE' });
+        setSavedSearches((current) => current.filter((item) => item.id !== id));
+    }
     const currentStatus = projectStatuses.find((option) => option.value === (selected?.status ?? 'on_track')) ?? projectStatuses[0];
 
     return <main className="min-h-[calc(100vh-4.25rem)] bg-white text-[#1e1f21] dark:bg-[#1e1f21] dark:text-[#f5f4f3]">
@@ -266,6 +324,15 @@ export function AsanaPlanningView({ workspace, initialProjectId = null, initialT
                                 <MenuSelect label="Assignee" value={filters.assignee} onChange={(value) => setFilters({ ...filters, assignee: value })} options={[['all', 'Anyone'], ['unassigned', 'Unassigned'], ...members.map((member) => [String(member.id), member.name] as [string, string])]} />
                                 <MenuSelect label="Due date" value={filters.due} onChange={(value) => setFilters({ ...filters, due: value })} options={[['all', 'Any date'], ['overdue', 'Overdue'], ['today', 'Due today'], ['none', 'No due date']]} />
                                 <button className="text-left text-xs font-semibold text-[#4573d2]" onClick={() => setFilters({ status: 'all', priority: 'all', assignee: 'all', due: 'all' })}>Clear filters</button>
+                                <div className="mt-2 border-t border-[#edeae9] pt-2 dark:border-[#3d3e40]">
+                                    <p className="text-[11px] font-bold uppercase tracking-wide text-[#8b8c8d]">Saved views</p>
+                                    {savedSearches.length === 0 && <p className="mt-1 text-xs text-[#8b8c8d]">No saved views yet.</p>}
+                                    {savedSearches.map((search) => <div key={search.id} className="mt-1 flex items-center gap-1"><button className="flex-1 truncate rounded-md px-2 py-1 text-left text-xs hover:bg-[#f1f1ef] dark:hover:bg-[#2c2d2f]" onClick={() => applySavedSearch(search)}>{search.name}</button><button aria-label={`Delete ${search.name}`} className="rounded-md p-1 text-[#8b8c8d] hover:bg-[#f1f1ef] hover:text-[#c53b3b] dark:hover:bg-[#2c2d2f]" onClick={() => void deleteSavedSearch(search.id)}><Trash2 size={13} /></button></div>)}
+                                    <div className="mt-2 flex items-center gap-1">
+                                        <input value={savedName} onChange={(event) => setSavedName(event.target.value)} onKeyDown={(event) => { if (event.key === 'Enter') { void saveCurrentSearch(); } }} className="h-7 flex-1 rounded-md border border-[#cfcbca] bg-transparent px-2 text-xs outline-none focus:border-[#4573d2]" placeholder="Save current view" />
+                                        <button disabled={savingSearch || !savedName.trim()} className="rounded-md bg-[#4573d2] px-2 py-1 text-xs font-semibold text-white disabled:opacity-40" onClick={() => void saveCurrentSearch()}>Save</button>
+                                    </div>
+                                </div>
                             </ToolbarMenu>
                             <ToolbarMenu open={openMenu === 'sort'} button={<ToolbarButton active={sortBy !== 'position'} icon={<ChevronDown size={15} />} label="Sort" onClick={() => setOpenMenu(openMenu === 'sort' ? null : 'sort')} />}>
                                 <MenuSelect label="Sort by" value={sortBy} onChange={(value) => setSortBy(value as SortBy)} options={[['position', 'Default order'], ['title', 'Task name'], ['due_date', 'Due date'], ['priority', 'Priority'], ['assignee', 'Assignee']]} />
