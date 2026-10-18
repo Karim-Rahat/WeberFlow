@@ -19,6 +19,7 @@ use App\Http\Controllers\Api\V1\ProjectCustomFieldController;
 use App\Http\Controllers\Api\V1\ProjectFormController;
 use App\Http\Controllers\Api\V1\ProjectSectionController;
 use App\Http\Controllers\Api\V1\ProjectTaskController;
+use App\Http\Controllers\Api\V1\ProjectTaskCsvController;
 use App\Http\Controllers\Api\V1\ProjectTemplateController;
 use App\Http\Controllers\Api\V1\SavedSearchController;
 use App\Http\Controllers\Api\V1\SearchController;
@@ -70,6 +71,8 @@ Route::prefix('v1')->group(function (): void {
         Route::get('/projects/{project}/workload', [ProjectController::class, 'workload'])->name('api.projects.workload');
         Route::post('/projects/{project}/sections', [ProjectSectionController::class, 'store'])->name('api.project-sections.store');
         Route::post('/projects/{project}/tasks', [ProjectTaskController::class, 'store'])->name('api.project-tasks.store');
+        Route::get('/projects/{project}/tasks/export', [ProjectTaskCsvController::class, 'export'])->name('api.project-tasks.export');
+        Route::post('/projects/{project}/tasks/import', [ProjectTaskCsvController::class, 'import'])->name('api.project-tasks.import');
         Route::post('/projects/{project}/custom-fields', [ProjectCustomFieldController::class, 'store'])->name('api.project-custom-fields.store');
         Route::delete('/projects/{project}/custom-fields/{customField}', [ProjectCustomFieldController::class, 'destroy'])->name('api.project-custom-fields.destroy');
         Route::post('/projects/{project}/forms', [ProjectFormController::class, 'store'])->name('api.project-forms.store');

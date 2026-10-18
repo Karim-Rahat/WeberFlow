@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState, type FormEvent, type ReactNode } from 'react';
+import { useEffect, useMemo, useRef, useState, type ChangeEvent, type FormEvent, type ReactNode } from 'react';
 import { CalendarDays, Check, ChevronDown, ChevronRight, Filter, LayoutDashboard, List, MoreHorizontal, Pencil, Plus, Search, SlidersHorizontal, Star, Trash2, Users } from 'lucide-react';
 import { Button } from '../components/ui/button';
 import { Input } from '../components/ui/input';
@@ -51,7 +51,7 @@ export function AsanaPlanningView({ workspace, initialProjectId = null, initialT
     const [notice, setNotice] = useState('');
     const [showNewProject, setShowNewProject] = useState(false);
     const [selectedTaskId, setSelectedTaskId] = useState<number | null>(null);
-    const [openMenu, setOpenMenu] = useState<'filter' | 'sort' | 'group' | 'options' | null>(null);
+    const [openMenu, setOpenMenu] = useState<'filter' | 'sort' | 'group' | 'options' | 'data' | null>(null);
     const [filters, setFilters] = useState<Filters>({ status: 'all', priority: 'all', assignee: 'all', due: 'all' });
     const [sortBy, setSortBy] = useState<SortBy>('position');
     const [sortDirection, setSortDirection] = useState<'asc' | 'desc'>('asc');
@@ -62,6 +62,7 @@ export function AsanaPlanningView({ workspace, initialProjectId = null, initialT
     const [savedSearches, setSavedSearches] = useState<SavedSearch[]>([]);
     const [savedName, setSavedName] = useState('');
     const [savingSearch, setSavingSearch] = useState(false);
+    const importInput = useRef<HTMLInputElement | null>(null);
 
     useEffect(() => {
         request<{ data: Member[] }>(`/api/v1/workspaces/${workspace.id}/members`).then(({ data }) => setMembers(data));
@@ -279,6 +280,43 @@ export function AsanaPlanningView({ workspace, initialProjectId = null, initialT
         await request(`/api/v1/saved-searches/${id}`, { method: 'DELETE' });
         setSavedSearches((current) => current.filter((item) => item.id !== id));
     }
+
+    function exportCsv() {
+        if (!selected) {
+            return;
+        }
+
+        const link = document.createElement('a');
+        link.href = `/api/v1/projects/${selected.id}/tasks/export`;
+        link.download = `${selected.name}-tasks.csv`;
+        document.body.appendChild(link);
+        link.click();
+        link.remove();
+        setNotice('Exporting tasks to CSV');
+        setOpenMenu(null);
+    }
+
+    async function importCsv(event: ChangeEvent<HTMLInputElement>) {
+        const file = event.target.files?.[0];
+        event.target.value = '';
+
+        if (!file || !selected) {
+            return;
+        }
+
+        const body = new FormData();
+        body.append('file', file);
+
+        try {
+            const { data } = await request<{ data: { imported: number; skipped: number } }>(`/api/v1/projects/${selected.id}/tasks/import`, { method: 'POST', body });
+            await refreshProject();
+            setNotice(`Imported ${data.imported} task${data.imported === 1 ? '' : 's'}${data.skipped ? `, skipped ${data.skipped}` : ''}`);
+        } catch {
+            setNotice('Unable to import that CSV file');
+        } finally {
+            setOpenMenu(null);
+        }
+    }
     const currentStatus = projectStatuses.find((option) => option.value === (selected?.status ?? 'on_track')) ?? projectStatuses[0];
 
     return <main className="min-h-[calc(100vh-4.25rem)] bg-white text-[#1e1f21] dark:bg-[#1e1f21] dark:text-[#f5f4f3]">
@@ -349,6 +387,11 @@ export function AsanaPlanningView({ workspace, initialProjectId = null, initialT
                                 <MenuToggle label="Due date" checked={listOptions.dueDate} onChange={(checked) => setListOptions({ ...listOptions, dueDate: checked })} />
                                 <MenuToggle label="Priority" checked={listOptions.priority} onChange={(checked) => setListOptions({ ...listOptions, priority: checked })} />
                                 <MenuToggle label="Task progress" checked={listOptions.status} onChange={(checked) => setListOptions({ ...listOptions, status: checked })} />
+                            </ToolbarMenu>
+                            <ToolbarMenu open={openMenu === 'data'} button={<ToolbarButton icon={<MoreHorizontal size={15} />} label="More" onClick={() => setOpenMenu(openMenu === 'data' ? null : 'data')} />}>
+                                <button className="text-left text-xs font-semibold text-[#4573d2]" onClick={exportCsv}>Export tasks (CSV)</button>
+                                <button className="text-left text-xs font-semibold text-[#4573d2]" onClick={() => importInput.current?.click()}>Import tasks (CSV)</button>
+                                <input ref={importInput} type="file" accept=".csv,text/csv" className="hidden" onChange={(event) => void importCsv(event)} />
                             </ToolbarMenu>
                             <div className="relative ml-2"><Search className="absolute left-2.5 top-1/2 -translate-y-1/2" size={14} /><input value={query} onChange={(event) => setQuery(event.target.value)} className="h-8 w-36 rounded-lg border border-[#cfcbca] bg-transparent pl-8 pr-2 text-xs outline-none focus:border-[#4573d2]" placeholder="Search" /></div>
                         </div>
