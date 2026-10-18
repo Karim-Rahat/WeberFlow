@@ -4,6 +4,7 @@ namespace App\Http\Controllers\Api\V1;
 
 use App\Http\Controllers\Controller;
 use App\Http\Requests\StoreProjectRequest;
+use App\Http\Requests\UpdateProjectRequest;
 use App\Http\Resources\ProjectResource;
 use App\Models\Project;
 use App\Models\Workspace;
@@ -50,6 +51,16 @@ class ProjectController extends Controller
             'customFields',
             'forms',
         ])->loadCount('tasks'));
+    }
+
+    public function update(UpdateProjectRequest $request, Project $project): ProjectResource
+    {
+        $this->ensureCurrentWorkspace($request, $project);
+        Gate::authorize('update', $project);
+
+        $project->update($request->safe()->only(['name', 'description', 'status', 'start_date', 'due_date']));
+
+        return new ProjectResource($project->loadCount('tasks'));
     }
 
     public function workload(Request $request, Project $project): JsonResponse

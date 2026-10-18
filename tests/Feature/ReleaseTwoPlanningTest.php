@@ -92,6 +92,46 @@ class ReleaseTwoPlanningTest extends TestCase
         $this->assertSame(1, Task::query()->where('recurring_parent_id', $task->id)->count());
     }
 
+    public function test_owner_updates_project_details_and_status(): void
+    {
+        $user = $this->createUserWithWorkspace();
+        $project = $this->createProject($user);
+
+        $response = $this->actingAs($user)->patchJson("/api/v1/projects/{$project->id}", [
+            'name' => 'Renamed launch',
+            'description' => 'Updated scope',
+            'status' => 'at_risk',
+            'start_date' => '2026-10-01',
+            'due_date' => '2026-11-01',
+        ]);
+
+        $response->assertOk()
+            ->assertJsonPath('data.name', 'Renamed launch')
+            ->assertJsonPath('data.status', 'at_risk');
+        $this->assertDatabaseHas('projects', ['id' => $project->id, 'name' => 'Renamed launch', 'status' => 'at_risk']);
+    }
+
+    public function test_project_update_rejects_due_date_before_start_date_with_422(): void
+    {
+        $user = $this->createUserWithWorkspace();
+        $project = $this->createProject($user);
+
+        $this->actingAs($user)->patchJson("/api/v1/projects/{$project->id}", [
+            'start_date' => '2026-11-01',
+            'due_date' => '2026-10-01',
+        ])->assertUnprocessable()->assertJsonValidationErrors('due_date');
+    }
+
+    public function test_member_cannot_update_another_workspace_project(): void
+    {
+        $user = $this->createUserWithWorkspace('member@example.com');
+        $other = $this->createUserWithWorkspace('other@example.com');
+        $project = $this->createProject($other);
+
+        $this->actingAs($user)->patchJson("/api/v1/projects/{$project->id}", ['status' => 'at_risk'])->assertNotFound();
+        $this->assertDatabaseMissing('projects', ['id' => $project->id, 'status' => 'at_risk']);
+    }
+
     private function createUserWithWorkspace(string $email = 'planner@example.com'): User
     {
         return app(CreateUserWithWorkspace::class)->handle(['name' => 'Release Planner', 'email' => $email, 'password' => 'password', 'workspace_name' => 'Release Two', 'timezone' => 'UTC']);

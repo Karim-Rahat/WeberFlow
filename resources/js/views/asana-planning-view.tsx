@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useState, type FormEvent, type ReactNode } from 'react';
-import { CalendarDays, Check, ChevronDown, ChevronRight, Circle, Filter, LayoutDashboard, List, MoreHorizontal, Plus, Search, SlidersHorizontal, Star, Users } from 'lucide-react';
+import { CalendarDays, Check, ChevronDown, ChevronRight, Filter, LayoutDashboard, List, MoreHorizontal, Pencil, Plus, Search, SlidersHorizontal, Star, Users } from 'lucide-react';
 import { Button } from '../components/ui/button';
 import { Input } from '../components/ui/input';
 import { AsanaTaskDetail } from './asana-task-detail';
@@ -10,12 +10,21 @@ type Project = {
     name: string;
     description: string | null;
     status: string | null;
+    start_date?: string | null;
+    due_date?: string | null;
     tasks_count: number;
     tasks?: Task[];
     sections?: Section[];
 };
 
 type Section = { id: number; name: string; position: number };
+
+const projectStatuses: { value: string; label: string; dot: string }[] = [
+    { value: 'on_track', label: 'On track', dot: 'bg-[#00a88b]' },
+    { value: 'at_risk', label: 'At risk', dot: 'bg-[#f1bd6c]' },
+    { value: 'off_track', label: 'Off track', dot: 'bg-[#f06a6a]' },
+    { value: 'complete', label: 'Complete', dot: 'bg-[#4573d2]' },
+];
 
 type View = 'list' | 'board' | 'timeline' | 'calendar' | 'dashboard';
 type Member = { id: number; name: string; email: string };
@@ -47,6 +56,8 @@ export function AsanaPlanningView({ workspace, initialProjectId = null, initialT
     const [sortDirection, setSortDirection] = useState<'asc' | 'desc'>('asc');
     const [groupBy, setGroupBy] = useState<GroupBy>('section');
     const [listOptions, setListOptions] = useState<ListOptions>({ showCompleted: true, compact: false, assignee: true, dueDate: true, priority: true, status: true });
+    const [editingProject, setEditingProject] = useState(false);
+    const [statusMenu, setStatusMenu] = useState(false);
 
     useEffect(() => {
         request<{ data: Member[] }>(`/api/v1/workspaces/${workspace.id}/members`).then(({ data }) => setMembers(data));
@@ -167,6 +178,19 @@ export function AsanaPlanningView({ workspace, initialProjectId = null, initialT
         await refreshProject();
     }
 
+    async function updateProject(fields: Record<string, unknown>) {
+        if (!selected) {
+            return;
+        }
+
+        await fetch('/sanctum/csrf-cookie', { credentials: 'include' });
+        await request(`/api/v1/projects/${selected.id}`, { method: 'PATCH', body: JSON.stringify(fields) });
+        await refreshProject();
+        setProjects(projects.map((project) => (project.id === selected.id ? { ...project, ...fields } as Project : project)));
+        setStatusMenu(false);
+        setNotice('Project updated');
+    }
+
     const filteredTasks = useMemo(() => {
         const priorityOrder = { low: 1, medium: 2, high: 3, urgent: 4 } as Record<string, number>;
         const tasks = (selected?.tasks ?? []).filter((task) => {
@@ -197,6 +221,7 @@ export function AsanaPlanningView({ workspace, initialProjectId = null, initialT
     }, [selected?.tasks, query, filters, sortBy, sortDirection, listOptions.showCompleted]);
 
     const activeFilterCount = Object.values(filters).filter((value) => value !== 'all').length;
+    const currentStatus = projectStatuses.find((option) => option.value === (selected?.status ?? 'on_track')) ?? projectStatuses[0];
 
     return <main className="min-h-[calc(100vh-4.25rem)] bg-white text-[#1e1f21] dark:bg-[#1e1f21] dark:text-[#f5f4f3]">
         <div className="grid min-h-[calc(100vh-4.25rem)] lg:grid-cols-[270px_minmax(0,1fr)]">
@@ -225,8 +250,8 @@ export function AsanaPlanningView({ workspace, initialProjectId = null, initialT
                 {selected ? <>
                     <header className="border-b border-[#edeae9] dark:border-[#3d3e40]">
                         <div className="flex flex-wrap items-center justify-between gap-4 px-6 pt-5">
-                            <div className="flex items-center gap-3"><span className="grid size-9 place-items-center rounded-lg bg-[#a66dd4] font-bold text-white">{selected.name.slice(0, 1).toUpperCase()}</span><h1 className="text-xl font-semibold">{selected.name}</h1><Star size={17} className="text-[#6d6e6f]" /><button className="flex items-center gap-1 text-xs text-[#6d6e6f]"><Circle size={12} />Set status</button></div>
-                            <div className="flex items-center gap-2"><div className="flex -space-x-2"><span className="grid size-7 place-items-center rounded-full border-2 border-white bg-[#4573d2] text-[10px] font-bold text-white dark:border-[#1e1f21]">KR</span><span className="grid size-7 place-items-center rounded-full border-2 border-white bg-[#00a88b] text-[10px] font-bold text-white dark:border-[#1e1f21]">WF</span></div><Button size="sm" onClick={shareProject}>Share</Button><Button size="sm" variant="outline" onClick={() => setOpenMenu(openMenu === 'options' ? null : 'options')}><SlidersHorizontal size={14} />Customize</Button></div>
+                            <div className="flex items-center gap-3"><span className="grid size-9 place-items-center rounded-lg bg-[#a66dd4] font-bold text-white">{selected.name.slice(0, 1).toUpperCase()}</span><h1 className="text-xl font-semibold">{selected.name}</h1><Star size={17} className="text-[#6d6e6f]" /><div className="relative"><button onClick={() => setStatusMenu(!statusMenu)} className="flex items-center gap-1.5 rounded-md px-1.5 py-1 text-xs text-[#6d6e6f] hover:bg-[#eeeceb] dark:hover:bg-[#363638]"><span className={`size-2 rounded-full ${currentStatus.dot}`} />{currentStatus.label}</button>{statusMenu && <div className="absolute left-0 top-7 z-30 grid w-40 gap-0.5 rounded-xl border border-[#edeae9] bg-white p-1 shadow-lg animate-pop-in dark:border-[#3d3e40] dark:bg-[#1e1f21]">{projectStatuses.map((option) => <button key={option.value} onClick={() => void updateProject({ status: option.value })} className="flex items-center gap-2 rounded-lg px-2 py-1.5 text-left text-xs hover:bg-[#eeeceb] dark:hover:bg-[#363638]"><span className={`size-2 rounded-full ${option.dot}`} />{option.label}{selected.status === option.value && <Check size={12} className="ml-auto" />}</button>)}</div>}</div></div>
+                            <div className="flex items-center gap-2"><div className="flex -space-x-2"><span className="grid size-7 place-items-center rounded-full border-2 border-white bg-[#4573d2] text-[10px] font-bold text-white dark:border-[#1e1f21]">KR</span><span className="grid size-7 place-items-center rounded-full border-2 border-white bg-[#00a88b] text-[10px] font-bold text-white dark:border-[#1e1f21]">WF</span></div><Button size="sm" variant="ghost" aria-label="Edit project" onClick={() => setEditingProject(true)}><Pencil size={15} /></Button><Button size="sm" onClick={shareProject}>Share</Button><Button size="sm" variant="outline" onClick={() => setOpenMenu(openMenu === 'options' ? null : 'options')}><SlidersHorizontal size={14} />Customize</Button></div>
                         </div>
                         <nav className="mt-3 flex gap-1 overflow-x-auto px-5">{views.map((item) => <button key={item.id} onClick={() => setView(item.id)} className={`border-b-2 px-3 py-3 text-sm font-semibold ${view === item.id ? 'border-[#4573d2] text-[#4573d2]' : 'border-transparent text-[#6d6e6f] hover:text-[#1e1f21] dark:hover:text-white'}`}>{item.label}</button>)}</nav>
                     </header>
@@ -273,7 +298,46 @@ export function AsanaPlanningView({ workspace, initialProjectId = null, initialT
             </section>
         </div>
         {selectedTaskId && selected && <AsanaTaskDetail taskId={selectedTaskId} projectId={selected.id} workspace={workspace} onClose={closeTask} onChanged={refreshProject} />}
+        {editingProject && selected && <ProjectSettingsModal project={selected} onClose={() => setEditingProject(false)} onSave={updateProject} />}
     </main>;
+}
+
+function ProjectSettingsModal({ project, onClose, onSave }: { project: Project; onClose: () => void; onSave: (fields: Record<string, unknown>) => Promise<void> }) {
+    const [busy, setBusy] = useState(false);
+    const [error, setError] = useState('');
+
+    async function submit(event: FormEvent<HTMLFormElement>) {
+        event.preventDefault();
+        const payload = Object.fromEntries(new FormData(event.currentTarget).entries());
+        setBusy(true);
+        setError('');
+        try {
+            await onSave(payload);
+            onClose();
+        } catch {
+            setError('Could not save the project. Check the dates and try again.');
+        } finally {
+            setBusy(false);
+        }
+    }
+
+    return <div className="fixed inset-0 z-50 grid place-items-center p-4">
+        <button aria-label="Close project settings" onClick={onClose} className="drawer-backdrop-enter absolute inset-0 bg-black/40" />
+        <form onSubmit={submit} className="animate-pop-in relative z-10 w-full max-w-lg rounded-2xl border border-[#edeae9] bg-white p-6 shadow-xl dark:border-[#3d3e40] dark:bg-[#1e1f21]">
+            <h2 className="text-lg font-semibold">Project settings</h2>
+            <div className="mt-4 grid gap-3">
+                <label className="grid gap-1 text-xs font-semibold text-[#6d6e6f] dark:text-[#a2a0a2]">Project name<Input name="name" defaultValue={project.name} required className="h-9 rounded-lg" /></label>
+                <label className="grid gap-1 text-xs font-semibold text-[#6d6e6f] dark:text-[#a2a0a2]">Description<textarea name="description" defaultValue={project.description ?? ''} rows={3} className="rounded-lg border border-[#cfcbca] bg-transparent px-3 py-2 text-sm text-[#1e1f21] outline-none focus:border-[#4573d2] dark:border-[#3d3e40] dark:text-[#f5f4f3]" /></label>
+                <div className="grid grid-cols-2 gap-3">
+                    <label className="grid gap-1 text-xs font-semibold text-[#6d6e6f] dark:text-[#a2a0a2]">Start date<Input name="start_date" type="date" defaultValue={project.start_date ?? ''} className="h-9 rounded-lg px-2" /></label>
+                    <label className="grid gap-1 text-xs font-semibold text-[#6d6e6f] dark:text-[#a2a0a2]">Due date<Input name="due_date" type="date" defaultValue={project.due_date ?? ''} className="h-9 rounded-lg px-2" /></label>
+                </div>
+                <label className="grid gap-1 text-xs font-semibold text-[#6d6e6f] dark:text-[#a2a0a2]">Status<select name="status" defaultValue={project.status ?? 'on_track'} className="h-9 rounded-lg border border-[#cfcbca] bg-transparent px-2 text-sm text-[#1e1f21] dark:border-[#3d3e40] dark:text-[#f5f4f3]">{projectStatuses.map((option) => <option key={option.value} value={option.value}>{option.label}</option>)}</select></label>
+                {error && <p className="text-xs font-semibold text-[#b64545]">{error}</p>}
+            </div>
+            <div className="mt-5 flex justify-end gap-2"><Button type="button" variant="ghost" size="sm" onClick={onClose}>Cancel</Button><Button type="submit" size="sm" disabled={busy}>{busy ? 'Saving…' : 'Save project'}</Button></div>
+        </form>
+    </div>;
 }
 
 function TaskList({ tasks, members, groupBy, options, sections, onOpen, onCreate, onCreateSection, onUpdate }: { tasks: Task[]; members: Member[]; groupBy: GroupBy; options: ListOptions; sections: Section[]; onOpen: (id: number) => void; onCreate: (title: string, isMilestone?: boolean, sectionId?: number | null) => Promise<void>; onCreateSection: (name: string) => Promise<void>; onUpdate: (task: Task, fields: Record<string, unknown>) => Promise<void> }) {
