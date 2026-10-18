@@ -297,7 +297,7 @@ function WorkspaceApp({ user, onUserChange }: { user: User; onUserChange: (user:
                     <span className="grid size-9 place-items-center rounded-full bg-brand-100 text-xs font-bold text-brand-700 dark:bg-brand-900 dark:text-brand-300">{initials}</span>
                 </header>
                 {!user.email_verified && <VerificationBanner />}
-                {view === 'settings' ? <SettingsViewV2 user={user} onUserChange={onUserChange} /> : view === 'planning' ? <AsanaPlanningView workspace={user.current_workspace} initialProjectId={projectRoute?.workspaceSlug === user.current_workspace.slug ? projectRoute.projectId : null} initialTaskId={projectRoute?.taskId ?? null} /> : view === 'people' ? <PeopleView workspace={user.current_workspace} /> : view === 'inbox' ? <InboxView /> : view === 'admin' ? <AdminView /> : <Dashboard user={user} query={query} onCreateTask={() => setView('planning')} />}
+                {view === 'settings' ? <SettingsViewV2 user={user} onUserChange={onUserChange} /> : view === 'planning' ? <AsanaPlanningView workspace={user.current_workspace} initialProjectId={projectRoute?.workspaceSlug === user.current_workspace.slug ? projectRoute.projectId : null} initialTaskId={projectRoute?.taskId ?? null} /> : view === 'people' ? <PeopleView workspace={user.current_workspace} /> : view === 'inbox' ? <InboxView user={user} workspace={user.current_workspace} /> : view === 'admin' ? <AdminView /> : <Dashboard user={user} query={query} onCreateTask={() => setView('planning')} />}
             </div>
         </div>
     );

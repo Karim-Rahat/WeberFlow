@@ -10,6 +10,7 @@ use App\Http\Controllers\Api\V1\Auth\RegisteredUserController;
 use App\Http\Controllers\Api\V1\Auth\SessionController;
 use App\Http\Controllers\Api\V1\Auth\VerifyEmailController;
 use App\Http\Controllers\Api\V1\CurrentWorkspaceController;
+use App\Http\Controllers\Api\V1\MessageController;
 use App\Http\Controllers\Api\V1\NotificationController;
 use App\Http\Controllers\Api\V1\NotificationPreferenceController;
 use App\Http\Controllers\Api\V1\ProfileController;
@@ -80,6 +81,11 @@ Route::prefix('v1')->group(function (): void {
         Route::delete('/attachments/{attachment}', [TaskAttachmentController::class, 'destroy'])->name('api.attachments.destroy');
         Route::post('/tasks/{task}/dependencies', [TaskDependencyController::class, 'store'])->name('api.task-dependencies.store');
         Route::delete('/tasks/{task}/dependencies', [TaskDependencyController::class, 'destroy'])->name('api.task-dependencies.destroy');
+        Route::get('/workspaces/{workspace}/messages', [MessageController::class, 'index'])->name('api.messages.index');
+        Route::post('/workspaces/{workspace}/messages', [MessageController::class, 'store'])->name('api.messages.store');
+        Route::get('/workspaces/{workspace}/messages/{user}', [MessageController::class, 'thread'])->name('api.messages.thread');
+        Route::get('/messages/{message}/image', [MessageController::class, 'image'])->name('api.messages.image');
+
         Route::get('/notifications', [NotificationController::class, 'index'])->name('api.notifications.index');
         Route::post('/notifications/{notification}/read', [NotificationController::class, 'read'])->name('api.notifications.read');
 

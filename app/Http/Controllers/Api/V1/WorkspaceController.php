@@ -59,8 +59,15 @@ class WorkspaceController extends Controller
     {
         abort_unless($request->user()->workspaces()->whereKey($workspace->getKey())->exists(), 404);
 
+        $search = $request->string('search')->trim()->toString();
+
         $members = $workspace->members()
             ->wherePivot('status', 'active')
+            ->when($search !== '', fn ($query) => $query->where(
+                fn ($query) => $query
+                    ->where('users.name', 'like', '%'.$search.'%')
+                    ->orWhere('users.email', 'like', '%'.$search.'%'),
+            ))
             ->orderBy('name')
             ->get(['users.id', 'users.name', 'users.email'])
             ->map(fn ($member): array => [
