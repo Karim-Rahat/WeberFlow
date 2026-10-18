@@ -282,7 +282,7 @@ function TaskList({ tasks, members, groupBy, options, sections, onOpen, onCreate
 
     return <div className="min-w-[760px] px-6 pb-12">
         <div className="grid border-b border-[#edeae9] text-xs text-[#6d6e6f] dark:border-[#3d3e40]" style={{ gridTemplateColumns: columns }}><span className="px-2 py-3">Name</span>{options.assignee && <span className="border-l border-[#edeae9] px-3 py-3 dark:border-[#3d3e40]">Assignee</span>}{options.dueDate && <span className="border-l border-[#edeae9] px-3 py-3 dark:border-[#3d3e40]">Due date</span>}{options.priority && <span className="border-l border-[#edeae9] px-3 py-3 dark:border-[#3d3e40]">Priority</span>}{options.status && <span className="border-l border-[#edeae9] px-3 py-3 dark:border-[#3d3e40]">Task progress</span>}</div>
-        {groups.map((group) => <section key={group.title} className="pt-4"><h2 className="flex items-center gap-2 px-2 py-2 font-semibold"><ChevronDown size={16} />{group.title}<span className="text-xs font-normal text-[#8b8c8d]">{group.tasks.length}</span></h2>
+        {groups.map((group) => <section key={group.title} className="pt-4 stagger-children"><h2 className="flex items-center gap-2 px-2 py-2 font-semibold"><ChevronDown size={16} />{group.title}<span className="text-xs font-normal text-[#8b8c8d]">{group.tasks.length}</span></h2>
             {group.tasks.map((task) => <TaskRow key={task.id} task={task} members={members} options={options} columns={columns} onOpen={onOpen} onUpdate={onUpdate} />)}
             {groupBy === 'section' && <InlineAddTask onCreate={(title) => onCreate(title, false, group.sectionId)} />}
         </section>)}
@@ -310,7 +310,7 @@ function AddSection({ onAdd }: { onAdd: (name: string) => Promise<void> }) {
         return <button onClick={() => setEditing(true)} className="mt-4 flex items-center gap-2 px-2 py-2 text-sm font-semibold text-[#6d6e6f] hover:text-[#1e1f21] dark:hover:text-white"><Plus size={17} />Add section</button>;
     }
 
-    return <form onSubmit={submit} className="mt-4 flex items-center gap-2 px-2"><Input autoFocus value={name} onChange={(event) => setName(event.target.value)} placeholder="Section name" className="h-9 min-w-64 rounded-lg" /><Button type="submit" size="sm">Add section</Button><Button type="button" size="sm" variant="ghost" onClick={() => setEditing(false)}>Cancel</Button></form>;
+    return <form onSubmit={submit} className="mt-4 flex items-center gap-2 px-2"><Input autoFocus value={name} onChange={(event) => setName(event.target.value)} placeholder="Section name" className="h-9 w-72 rounded-lg" /><Button type="submit" size="sm" className="whitespace-nowrap">Add section</Button><Button type="button" size="sm" variant="ghost" onClick={() => setEditing(false)}>Cancel</Button></form>;
 }
 
 function TaskRow({ task, members, options, columns, onOpen, onUpdate }: { task: Task; members: Member[]; options: ListOptions; columns: string; onOpen: (id: number) => void; onUpdate: (task: Task, fields: Record<string, unknown>) => Promise<void> }) {
@@ -338,37 +338,49 @@ function InlineAddTask({ onCreate, compact = false }: { onCreate: (title: string
         return <button onClick={() => setEditing(true)} className={`flex items-center gap-2 text-sm ${compact ? 'rounded-lg border border-[#cfcbca] px-3 py-1.5 font-semibold' : 'px-14 py-2 text-[#6d6e6f]'}`}><Plus size={15} />Add task{compact && <ChevronDown size={14} />}</button>;
     }
 
-    return <form onSubmit={submit} className={`flex items-center gap-2 ${compact ? '' : 'px-7 py-1.5'}`}><Input autoFocus value={title} onChange={(event) => setTitle(event.target.value)} placeholder="Task name" className="h-8 min-w-64 rounded-lg" /><Button type="submit" size="sm">Add</Button><Button type="button" size="sm" variant="ghost" onClick={() => setEditing(false)}>Cancel</Button></form>;
+    return <form onSubmit={submit} className={`flex items-center gap-2 ${compact ? '' : 'px-7 py-1.5'}`}><Input autoFocus value={title} onChange={(event) => setTitle(event.target.value)} placeholder="Task name" className="h-8 w-72 rounded-lg" /><Button type="submit" size="sm">Add</Button><Button type="button" size="sm" variant="ghost" onClick={() => setEditing(false)}>Cancel</Button></form>;
 }
 
 function TaskBoard({ tasks, onOpen }: { tasks: Task[]; onOpen: (id: number) => void }) {
-    return <div className="grid min-w-[760px] grid-cols-4 gap-4 p-6">{['not_started', 'in_progress', 'blocked', 'complete'].map((status) => <section key={status} className="rounded-xl bg-[#f7f5f4] p-3 dark:bg-[#292a2c]"><h2 className="mb-3 text-sm font-semibold capitalize">{status.replaceAll('_', ' ')}</h2><div className="grid gap-2">{tasks.filter((task) => task.status === status).map((task) => <button key={task.id} onClick={() => onOpen(task.id)} className="rounded-lg border border-[#edeae9] bg-white p-3 text-left text-sm shadow-sm dark:border-[#3d3e40] dark:bg-[#1e1f21]">{task.title}</button>)}</div></section>)}</div>;
+    return <div className="grid min-w-[760px] grid-cols-4 gap-4 p-6 stagger-children">{['not_started', 'in_progress', 'blocked', 'complete'].map((status) => <section key={status} className="rounded-xl bg-[#f7f5f4] p-3 dark:bg-[#292a2c]"><h2 className="mb-3 text-sm font-semibold capitalize">{status.replaceAll('_', ' ')}</h2><div className="grid gap-2 stagger-children">{tasks.filter((task) => task.status === status).map((task) => <button key={task.id} onClick={() => onOpen(task.id)} className="rounded-lg border border-[#edeae9] bg-white p-3 text-left text-sm shadow-sm dark:border-[#3d3e40] dark:bg-[#1e1f21]">{task.title}</button>)}</div></section>)}</div>;
 }
 
 function TaskTimeline({ tasks, onOpen }: { tasks: Task[]; onOpen: (id: number) => void }) {
-    return <div className="grid gap-3 p-6">{tasks.map((task, index) => <button key={task.id} onClick={() => onOpen(task.id)} className="grid grid-cols-[180px_1fr] items-center gap-4 text-left"><span className="truncate text-sm">{task.title}</span><span className="relative h-8 rounded bg-[#f1f0ef] dark:bg-[#292a2c]"><span className="absolute top-1 h-6 rounded bg-[#4573d2]" style={{ left: `${(index * 9) % 55}%`, width: `${20 + (index % 3) * 8}%` }} /></span></button>)}</div>;
+    return <div className="grid gap-3 p-6 stagger-children">{tasks.map((task, index) => <button key={task.id} onClick={() => onOpen(task.id)} className="grid grid-cols-[180px_1fr] items-center gap-4 text-left"><span className="truncate text-sm">{task.title}</span><span className="relative h-8 rounded bg-[#f1f0ef] dark:bg-[#292a2c]"><span className="absolute top-1 h-6 rounded bg-[#4573d2]" style={{ left: `${(index * 9) % 55}%`, width: `${20 + (index % 3) * 8}%` }} /></span></button>)}</div>;
 }
 
 function TaskCalendar({ tasks, onOpen }: { tasks: Task[]; onOpen: (id: number) => void }) {
-    return <div className="grid gap-3 p-6 sm:grid-cols-2 xl:grid-cols-3">{tasks.map((task) => <button key={task.id} onClick={() => onOpen(task.id)} className="rounded-xl border border-[#edeae9] p-4 text-left dark:border-[#3d3e40]"><CalendarDays size={17} className="mb-3 text-[#4573d2]" /><strong className="block text-sm">{task.title}</strong><span className="mt-1 block text-xs text-[#6d6e6f]">{task.due_date ?? 'No due date'}</span></button>)}</div>;
+    return <div className="grid gap-3 p-6 stagger-children sm:grid-cols-2 xl:grid-cols-3">{tasks.map((task) => <button key={task.id} onClick={() => onOpen(task.id)} className="rounded-xl border border-[#edeae9] p-4 text-left dark:border-[#3d3e40]"><CalendarDays size={17} className="mb-3 text-[#4573d2]" /><strong className="block text-sm">{task.title}</strong><span className="mt-1 block text-xs text-[#6d6e6f]">{task.due_date ?? 'No due date'}</span></button>)}</div>;
 }
 
 function ProjectDashboard({ tasks }: { tasks: Task[] }) {
     const complete = tasks.filter((task) => task.status === 'complete').length;
-    return <div className="grid gap-4 p-6 sm:grid-cols-3"><Stat label="Total tasks" value={tasks.length} /><Stat label="Completed" value={complete} /><Stat label="In progress" value={tasks.filter((task) => task.status === 'in_progress').length} /><div className="sm:col-span-3 rounded-xl border border-[#edeae9] p-5 dark:border-[#3d3e40]"><h2 className="font-semibold">Progress</h2><div className="mt-4 h-3 overflow-hidden rounded-full bg-[#edeae9] dark:bg-[#3d3e40]"><div className="h-full bg-[#00a88b]" style={{ width: `${tasks.length ? (complete / tasks.length) * 100 : 0}%` }} /></div></div></div>;
+    return <div className="grid gap-4 p-6 stagger-children sm:grid-cols-3"><Stat label="Total tasks" value={tasks.length} /><Stat label="Completed" value={complete} /><Stat label="In progress" value={tasks.filter((task) => task.status === 'in_progress').length} /><div className="sm:col-span-3 rounded-xl border border-[#edeae9] p-5 dark:border-[#3d3e40]"><h2 className="font-semibold">Progress</h2><div className="mt-4 h-3 overflow-hidden rounded-full bg-[#edeae9] dark:bg-[#3d3e40]"><div className="h-full bg-[#00a88b]" style={{ width: `${tasks.length ? (complete / tasks.length) * 100 : 0}%` }} /></div></div></div>;
 }
 
 function Stat({ label, value }: { label: string; value: number }) {
     return <div className="rounded-xl border border-[#edeae9] p-5 dark:border-[#3d3e40]"><span className="text-sm text-[#6d6e6f]">{label}</span><strong className="mt-2 block text-3xl">{value}</strong></div>;
 }
 
-function taskGroups(tasks: Task[], groupBy: GroupBy): { title: string; tasks: Task[]; milestone: boolean }[] {
+function taskGroups(tasks: Task[], groupBy: GroupBy, sections: Section[]): { title: string; tasks: Task[]; sectionId: number | null }[] {
     if (groupBy === 'section') {
-        return [
-            { title: 'Planning', tasks: tasks.filter((task) => !task.is_milestone && task.status !== 'complete'), milestone: false },
-            { title: 'Milestones', tasks: tasks.filter((task) => task.is_milestone && task.status !== 'complete'), milestone: true },
-            { title: 'Completed', tasks: tasks.filter((task) => task.status === 'complete'), milestone: false },
-        ];
+        if (sections.length === 0) {
+            return [{ title: 'Tasks', tasks, sectionId: null }];
+        }
+
+        const known = new Set(sections.map((section) => section.id));
+        const groups: { title: string; tasks: Task[]; sectionId: number | null }[] = sections.map((section) => ({
+            title: section.name,
+            sectionId: section.id,
+            tasks: tasks.filter((task) => task.section_id === section.id),
+        }));
+        const unsectioned = tasks.filter((task) => !task.section_id || !known.has(task.section_id));
+
+        if (unsectioned.length > 0) {
+            groups.push({ title: 'No section', sectionId: null, tasks: unsectioned });
+        }
+
+        return groups;
     }
 
     const labels: Record<string, string> = {
@@ -382,7 +394,7 @@ function taskGroups(tasks: Task[], groupBy: GroupBy): { title: string; tasks: Ta
         grouped.set(key, [...(grouped.get(key) ?? []), task]);
     });
 
-    return [...grouped.entries()].map(([key, groupedTasks]) => ({ title: labels[key] ?? key, tasks: groupedTasks, milestone: false }));
+    return [...grouped.entries()].map(([key, groupedTasks]) => ({ title: labels[key] ?? key, tasks: groupedTasks, sectionId: null }));
 }
 
 function ToolbarMenu({ open, button, children }: { open: boolean; button: ReactNode; children: ReactNode }) {

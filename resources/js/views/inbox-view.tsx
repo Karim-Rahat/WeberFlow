@@ -225,7 +225,7 @@ export function InboxView({ user, workspace }: { user: User; workspace: Workspac
                         </div>
                         <div className="min-h-0 flex-1 overflow-y-auto p-2">
                             {search.trim() !== '' ? (
-                                <div className="grid gap-1">
+                                <div className="grid gap-1 stagger-children">
                                     <p className="px-2 py-1 text-[11px] font-bold uppercase tracking-[.12em] text-[#78827b]">Members</p>
                                     {members.map((member) => (
                                         <button
@@ -247,7 +247,7 @@ export function InboxView({ user, workspace }: { user: User; workspace: Workspac
                                     )}
                                 </div>
                             ) : (
-                                <div className="grid gap-1">
+                                <div className="grid gap-1 stagger-children">
                                     <button
                                         onClick={() => void openConversation({ id: user.id, name: `${user.name} (You)`, email: 'Personal notes', role: '' })}
                                         className={`flex items-center gap-3 rounded-xl px-2.5 py-2 text-left text-sm ${isSelfThread ? 'bg-brand-50 dark:bg-brand-900' : 'hover:bg-[#eef1ea] dark:hover:bg-[#222a25]'}`}
@@ -308,8 +308,8 @@ export function InboxView({ user, workspace }: { user: User; workspace: Workspac
                                     {!loadingThread && thread.length === 0 && (
                                         <p className="py-10 text-center text-sm text-[#68736c] dark:text-[#a8b1ab]">No messages yet. Say hello to {active.name.split(' ')[0]}.</p>
                                     )}
-                                    {thread.map((message) => (
-                                        <div key={message.id} className={`flex ${message.from_me ? 'justify-end' : 'justify-start'}`}>
+                                    {thread.map((message, index) => (
+                                        <div key={message.id} className={`flex ${message.from_me ? 'justify-end' : 'justify-start'}${index === thread.length - 1 ? ' animate-rise-in' : ''}`}>
                                             <div className={`max-w-[75%] rounded-2xl px-4 py-2.5 text-sm ${message.from_me ? 'bg-brand-600 text-white' : 'border border-[#dce3dc] bg-white dark:border-[#303a33] dark:bg-[#181d1a]'}`}>
                                                 {message.image_url && (
                                                     <a href={message.image_url} target="_blank" rel="noreferrer" className="mb-2 block">
@@ -379,7 +379,7 @@ export function InboxView({ user, workspace }: { user: User; workspace: Workspac
                     {items === null ? (
                         <LoaderCircle className="m-8 animate-spin text-brand-600" />
                     ) : (
-                        <div className="divide-y divide-[#dce3dc] dark:divide-[#303a33]">
+                        <div className="divide-y divide-[#dce3dc] stagger-children dark:divide-[#303a33]">
                             {items.map((item) => (
                                 <article key={item.id} className={`flex items-start gap-3 p-5 ${item.read_at ? 'opacity-60' : ''}`}>
                                     <Bell size={17} className="mt-0.5 text-brand-600" />

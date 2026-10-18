@@ -180,7 +180,7 @@ function AuthScreen({ onAuthenticated }: { onAuthenticated: (user: User) => void
 
     return (
         <main className="grid min-h-screen bg-[#f5f6f1] dark:bg-[#111512] lg:grid-cols-[1.05fr_.95fr]">
-            <section className="hidden overflow-hidden bg-brand-900 p-12 text-white lg:flex lg:flex-col lg:justify-between">
+            <section className="hidden animate-fade-in overflow-hidden bg-brand-900 p-12 text-white lg:flex lg:flex-col lg:justify-between">
                 <Brand inverse />
                 <div className="max-w-xl">
                     <p className="mb-4 text-sm font-bold uppercase tracking-[.18em] text-brand-300">Work moves better together</p>
@@ -191,7 +191,7 @@ function AuthScreen({ onAuthenticated }: { onAuthenticated: (user: User) => void
             </section>
 
             <section className="flex min-h-screen items-center justify-center p-5 sm:p-10">
-                <div className="w-full max-w-md">
+                <div className="w-full max-w-md animate-rise-in">
                     <div className="mb-10 lg:hidden"><Brand /></div>
                     <p className="mb-2 text-sm font-bold text-brand-600 dark:text-brand-300">{mode === 'register' ? 'Start your team' : 'WeberFlow account'}</p>
                     <h2 className="text-3xl font-semibold tracking-[-.045em]">{title}</h2>
@@ -273,9 +273,9 @@ function WorkspaceApp({ user, onUserChange }: { user: User; onUserChange: (user:
                         <span className="grid size-8 place-items-center rounded-lg bg-brand-100 text-xs font-bold text-brand-700 dark:bg-brand-900 dark:text-brand-300">{user.current_workspace.name.slice(0, 2).toUpperCase()}</span>
                         <span className="min-w-0 flex-1"><strong className="block truncate text-sm">{user.current_workspace.name}</strong><small className="text-[#68736c] dark:text-[#a8b1ab]">{user.current_workspace.role}</small></span><ChevronDown size={15} />
                     </button>
-                    {workspaceMenu && <Card className="absolute right-3 left-3 top-[70px] z-50 overflow-hidden p-1">{user.workspaces.map((workspace) => <button key={workspace.id} className="flex w-full items-center justify-between rounded-lg px-3 py-2 text-left text-sm hover:bg-[#eef1ea] dark:hover:bg-[#222a25]" onClick={() => switchWorkspace(workspace.id)}>{workspace.name}{workspace.id === user.current_workspace.id && <CheckCircle2 size={15} className="text-brand-600" />}</button>)}</Card>}
+                    {workspaceMenu && <Card className="absolute right-3 left-3 top-[70px] z-50 animate-pop-in overflow-hidden p-1">{user.workspaces.map((workspace) => <button key={workspace.id} className="flex w-full items-center justify-between rounded-lg px-3 py-2 text-left text-sm hover:bg-[#eef1ea] dark:hover:bg-[#222a25]" onClick={() => switchWorkspace(workspace.id)}>{workspace.name}{workspace.id === user.current_workspace.id && <CheckCircle2 size={15} className="text-brand-600" />}</button>)}</Card>}
                 </div>
-                <nav className="mt-5 grid flex-1 content-start gap-1 px-3">
+                <nav className="mt-5 grid flex-1 content-start gap-1 px-3 stagger-children">
                     <NavButton active={view === 'home'} icon={<Home size={17} />} label="Home" onClick={() => setView('home')} />
                     <NavButton active={view === 'planning'} icon={<CheckCircle2 size={17} />} label="My tasks" onClick={() => setView('planning')} />
                     <NavButton active={view === 'inbox'} icon={<Inbox size={17} />} label="Inbox" onClick={() => setView('inbox')} />
@@ -297,7 +297,7 @@ function WorkspaceApp({ user, onUserChange }: { user: User; onUserChange: (user:
                     <span className="grid size-9 place-items-center rounded-full bg-brand-100 text-xs font-bold text-brand-700 dark:bg-brand-900 dark:text-brand-300">{initials}</span>
                 </header>
                 {!user.email_verified && <VerificationBanner />}
-                {view === 'settings' ? <SettingsViewV2 user={user} onUserChange={onUserChange} /> : view === 'planning' ? <AsanaPlanningView workspace={user.current_workspace} initialProjectId={projectRoute?.workspaceSlug === user.current_workspace.slug ? projectRoute.projectId : null} initialTaskId={projectRoute?.taskId ?? null} /> : view === 'people' ? <PeopleView workspace={user.current_workspace} /> : view === 'inbox' ? <InboxView user={user} workspace={user.current_workspace} /> : view === 'admin' ? <AdminView /> : <Dashboard user={user} query={query} onCreateTask={() => setView('planning')} />}
+                <div key={view} className="view-enter">{view === 'settings' ? <SettingsViewV2 user={user} onUserChange={onUserChange} /> : view === 'planning' ? <AsanaPlanningView workspace={user.current_workspace} initialProjectId={projectRoute?.workspaceSlug === user.current_workspace.slug ? projectRoute.projectId : null} initialTaskId={projectRoute?.taskId ?? null} /> : view === 'people' ? <PeopleView workspace={user.current_workspace} /> : view === 'inbox' ? <InboxView user={user} workspace={user.current_workspace} /> : view === 'admin' ? <AdminView /> : <Dashboard user={user} query={query} onCreateTask={() => setView('planning')} />}</div>
             </div>
         </div>
     );
@@ -318,7 +318,7 @@ const demoTasks = [
 
 function Dashboard({ user, query, onCreateTask }: { user: User; query: string; onCreateTask: () => void }) {
     const tasks = useMemo(() => demoTasks.filter((task) => `${task[0]} ${task[1]}`.toLowerCase().includes(query.toLowerCase())), [query]);
-    return <main className="mx-auto max-w-[1480px] p-4 sm:p-6 lg:p-8"><div className="mb-8 flex flex-wrap items-end justify-between gap-4"><div><p className="mb-1 text-sm text-[#68736c] dark:text-[#a8b1ab]">{user.current_workspace.name}</p><h1 className="text-3xl font-semibold tracking-[-.045em] sm:text-4xl">Good afternoon, {user.name.split(' ')[0]}</h1></div><Button onClick={onCreateTask}><Plus size={17} />Create task</Button></div><section className="mb-8 grid gap-4 sm:grid-cols-2 xl:grid-cols-4"><Metric label="Due today" value="6" /><Metric label="Overdue" value="3" danger /><Metric label="Completed this week" value="18" /><Metric label="Active projects" value="7" /></section><Card className="overflow-hidden"><div className="border-b border-[#dce3dc] px-5 py-4 dark:border-[#303a33]"><h2 className="font-bold">My tasks</h2><p className="text-xs text-[#68736c] dark:text-[#a8b1ab]">Your most important work</p></div><div className="divide-y divide-[#e5e9e3] dark:divide-[#303a33]">{tasks.map((task) => <div key={task[0]} className="grid grid-cols-[auto_1fr_auto] items-center gap-3 px-5 py-4 hover:bg-[#f8f9f6] dark:hover:bg-[#1e2520]"><button aria-label={`Complete ${task[0]}`} className="size-5 rounded-full border-2 border-[#aeb8b1]" /><div><strong className="block text-sm">{task[0]}</strong><small className="text-[#78827b]">{task[1]}</small></div><span className={`text-xs font-semibold ${task[2] === 'Yesterday' ? 'text-[#b64545]' : 'text-[#68736c]'}`}>{task[2]}</span></div>)}{tasks.length === 0 && <p className="p-10 text-center text-sm text-[#68736c]">No matching tasks.</p>}</div></Card></main>;
+    return <main className="mx-auto max-w-[1480px] p-4 sm:p-6 lg:p-8"><div className="mb-8 flex flex-wrap items-end justify-between gap-4"><div><p className="mb-1 text-sm text-[#68736c] dark:text-[#a8b1ab]">{user.current_workspace.name}</p><h1 className="text-3xl font-semibold tracking-[-.045em] sm:text-4xl">Good afternoon, {user.name.split(' ')[0]}</h1></div><Button onClick={onCreateTask}><Plus size={17} />Create task</Button></div><section className="mb-8 grid gap-4 stagger-children sm:grid-cols-2 xl:grid-cols-4"><Metric label="Due today" value="6" /><Metric label="Overdue" value="3" danger /><Metric label="Completed this week" value="18" /><Metric label="Active projects" value="7" /></section><Card className="overflow-hidden"><div className="border-b border-[#dce3dc] px-5 py-4 dark:border-[#303a33]"><h2 className="font-bold">My tasks</h2><p className="text-xs text-[#68736c] dark:text-[#a8b1ab]">Your most important work</p></div><div className="divide-y divide-[#e5e9e3] stagger-children dark:divide-[#303a33]">{tasks.map((task) => <div key={task[0]} className="grid grid-cols-[auto_1fr_auto] items-center gap-3 px-5 py-4 hover:bg-[#f8f9f6] dark:hover:bg-[#1e2520]"><button aria-label={`Complete ${task[0]}`} className="size-5 rounded-full border-2 border-[#aeb8b1]" /><div><strong className="block text-sm">{task[0]}</strong><small className="text-[#78827b]">{task[1]}</small></div><span className={`text-xs font-semibold ${task[2] === 'Yesterday' ? 'text-[#b64545]' : 'text-[#68736c]'}`}>{task[2]}</span></div>)}{tasks.length === 0 && <p className="p-10 text-center text-sm text-[#68736c]">No matching tasks.</p>}</div></Card></main>;
 }
 
 function SettingsView({ user, onUserChange }: { user: User; onUserChange: (user: User) => void }) {
