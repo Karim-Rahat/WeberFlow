@@ -26,12 +26,13 @@ const projectStatuses: { value: string; label: string; dot: string }[] = [
     { value: 'complete', label: 'Complete', dot: 'bg-[#4573d2]' },
 ];
 
-type View = 'list' | 'board' | 'timeline' | 'calendar' | 'dashboard';
+type View = 'list' | 'board' | 'timeline' | 'calendar' | 'dashboard' | 'messages';
 type Member = { id: number; name: string; email: string };
 type GroupBy = 'section' | 'status' | 'priority' | 'assignee';
 type SortBy = 'position' | 'title' | 'due_date' | 'priority' | 'assignee';
 type Filters = { status: string; priority: string; assignee: string; due: string };
 type SavedSearch = { id: number; name: string; filters: { status?: string; priority?: string; assignee?: string; due?: string; sortBy?: SortBy; sortDirection?: 'asc' | 'desc'; groupBy?: GroupBy } };
+type ProjectMessage = { id: number; body: string; user_id: number; author?: { id: number; name: string }; can_delete: boolean; created_at: string };
 type ListOptions = { showCompleted: boolean; compact: boolean; assignee: boolean; dueDate: boolean; priority: boolean; status: boolean };
 
 const views: { id: View; label: string }[] = [
@@ -40,6 +41,7 @@ const views: { id: View; label: string }[] = [
     { id: 'timeline', label: 'Timeline' },
     { id: 'dashboard', label: 'Dashboard' },
     { id: 'calendar', label: 'Calendar' },
+    { id: 'messages', label: 'Messages' },
 ];
 
 export function AsanaPlanningView({ workspace, initialProjectId = null, initialTaskId = null }: { workspace: Workspace; initialProjectId?: number | null; initialTaskId?: number | null }) {
@@ -403,6 +405,7 @@ export function AsanaPlanningView({ workspace, initialProjectId = null, initialT
                         {view === 'timeline' && <TaskTimeline tasks={filteredTasks} onOpen={openTask} />}
                         {view === 'calendar' && <TaskCalendar tasks={filteredTasks} onOpen={openTask} />}
                         {view === 'dashboard' && <ProjectDashboard tasks={filteredTasks} />}
+                        {view === 'messages' && <ProjectMessages project={selected} />}
                     </div>
                 </> : <div className="grid min-h-[70vh] place-items-center p-8 text-center"><div><List className="mx-auto text-[#a2a0a2]" size={44} /><h2 className="mt-4 text-xl font-semibold">Select a project</h2><p className="mt-2 text-sm text-[#6d6e6f]">Choose a project from the sidebar or create a new one.</p></div></div>}
             </section>
@@ -534,6 +537,70 @@ function ProjectDashboard({ tasks }: { tasks: Task[] }) {
 
 function Stat({ label, value }: { label: string; value: number }) {
     return <div className="rounded-xl border border-[#edeae9] p-5 dark:border-[#3d3e40]"><span className="text-sm text-[#6d6e6f]">{label}</span><strong className="mt-2 block text-3xl">{value}</strong></div>;
+}
+
+function ProjectMessages({ project }: { project: Project }) {
+    const [messages, setMessages] = useState<ProjectMessage[]>([]);
+    const [body, setBody] = useState('');
+    const [posting, setPosting] = useState(false);
+    const [loaded, setLoaded] = useState(false);
+
+    useEffect(() => {
+        let active = true;
+        setLoaded(false);
+        request<{ data: ProjectMessage[] }>(`/api/v1/projects/${project.id}/messages`).then(({ data }) => {
+            if (active) {
+                setMessages(data);
+                setLoaded(true);
+            }
+        });
+
+        return () => { active = false; };
+    }, [project.id]);
+
+    async function post(event: FormEvent<HTMLFormElement>) {
+        event.preventDefault();
+
+        if (!body.trim() || posting) {
+            return;
+        }
+
+        setPosting(true);
+
+        try {
+            const { data } = await request<{ data: ProjectMessage }>(`/api/v1/projects/${project.id}/messages`, { method: 'POST', body: JSON.stringify({ body }) });
+            setMessages((current) => [data, ...current]);
+            setBody('');
+        } finally {
+            setPosting(false);
+        }
+    }
+
+    async function remove(id: number) {
+        await request(`/api/v1/projects/${project.id}/messages/${id}`, { method: 'DELETE' });
+        setMessages((current) => current.filter((message) => message.id !== id));
+    }
+
+    return (
+        <div className="mx-auto grid max-w-3xl gap-4 p-6">
+            <form onSubmit={post} className="rounded-xl border border-[#edeae9] bg-white p-4 dark:border-[#3d3e40] dark:bg-[#1e1f21]">
+                <textarea value={body} onChange={(event) => setBody(event.target.value)} rows={3} className="w-full resize-y rounded-lg border border-[#cfcbca] bg-transparent p-3 text-sm outline-none focus:border-[#4573d2]" placeholder={`Share an update with the ${project.name} team`} />
+                <div className="mt-2 flex justify-end"><Button type="submit" disabled={posting || !body.trim()}>Post update</Button></div>
+            </form>
+            {loaded && messages.length === 0 && <p className="py-6 text-center text-sm text-[#8b8c8d]">No updates yet. Post the first one.</p>}
+            <div className="grid gap-3 stagger-children">
+                {messages.map((message) => (
+                    <article key={message.id} className="rounded-xl border border-[#edeae9] bg-white p-4 dark:border-[#3d3e40] dark:bg-[#1e1f21]">
+                        <header className="flex items-center justify-between gap-2">
+                            <div className="flex items-center gap-2"><span className="grid h-8 w-8 place-items-center rounded-full bg-[#4573d2] text-xs font-semibold text-white">{(message.author?.name ?? 'U').slice(0, 1).toUpperCase()}</span><div><strong className="block text-sm">{message.author?.name ?? 'Unknown'}</strong><time className="text-xs text-[#8b8c8d]">{new Date(message.created_at).toLocaleString()}</time></div></div>
+                            {message.can_delete && <button aria-label="Delete update" className="rounded-md p-1 text-[#8b8c8d] hover:bg-[#f1f1ef] hover:text-[#c53b3b] dark:hover:bg-[#2c2d2f]" onClick={() => void remove(message.id)}><Trash2 size={14} /></button>}
+                        </header>
+                        <p className="mt-3 whitespace-pre-wrap text-sm text-[#1e1f21] dark:text-[#e8e8e8]">{message.body}</p>
+                    </article>
+                ))}
+            </div>
+        </div>
+    );
 }
 
 function taskGroups(tasks: Task[], groupBy: GroupBy, sections: Section[]): { title: string; tasks: Task[]; sectionId: number | null }[] {

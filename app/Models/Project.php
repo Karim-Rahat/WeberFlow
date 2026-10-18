@@ -45,6 +45,11 @@ class Project extends Model
         return $this->hasMany(ProjectForm::class)->latest();
     }
 
+    public function projectMessages(): HasMany
+    {
+        return $this->hasMany(ProjectMessage::class)->latest();
+    }
+
     protected function casts(): array
     {
         return ['start_date' => 'date', 'due_date' => 'date'];

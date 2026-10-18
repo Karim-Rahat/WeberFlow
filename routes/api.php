@@ -17,6 +17,7 @@ use App\Http\Controllers\Api\V1\ProfileController;
 use App\Http\Controllers\Api\V1\ProjectController;
 use App\Http\Controllers\Api\V1\ProjectCustomFieldController;
 use App\Http\Controllers\Api\V1\ProjectFormController;
+use App\Http\Controllers\Api\V1\ProjectMessageController;
 use App\Http\Controllers\Api\V1\ProjectSectionController;
 use App\Http\Controllers\Api\V1\ProjectTaskController;
 use App\Http\Controllers\Api\V1\ProjectTaskCsvController;
@@ -70,6 +71,9 @@ Route::prefix('v1')->group(function (): void {
         Route::patch('/projects/{project}', [ProjectController::class, 'update'])->name('api.projects.update');
         Route::get('/projects/{project}/workload', [ProjectController::class, 'workload'])->name('api.projects.workload');
         Route::post('/projects/{project}/sections', [ProjectSectionController::class, 'store'])->name('api.project-sections.store');
+        Route::get('/projects/{project}/messages', [ProjectMessageController::class, 'index'])->name('api.project-messages.index');
+        Route::post('/projects/{project}/messages', [ProjectMessageController::class, 'store'])->name('api.project-messages.store');
+        Route::delete('/projects/{project}/messages/{projectMessage}', [ProjectMessageController::class, 'destroy'])->name('api.project-messages.destroy');
         Route::post('/projects/{project}/tasks', [ProjectTaskController::class, 'store'])->name('api.project-tasks.store');
         Route::get('/projects/{project}/tasks/export', [ProjectTaskCsvController::class, 'export'])->name('api.project-tasks.export');
         Route::post('/projects/{project}/tasks/import', [ProjectTaskCsvController::class, 'import'])->name('api.project-tasks.import');
